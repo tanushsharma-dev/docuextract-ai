@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from sqlalchemy import text
 
-from app.models.database import engine
+from app.core.database import engine
 
 
 def seed_database() -> None:

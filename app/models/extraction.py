@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, Float, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.database import Base
+from app.core.database import Base
 
 
 class ExtractionResult(Base):

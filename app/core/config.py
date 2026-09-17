@@ -1,25 +1,22 @@
-from __future__ import annotations
+from pydantic_settings import BaseSettings
+from functools import lru_cache
 
-import os
-from dataclasses import dataclass
+class Settings(BaseSettings):
+    DATABASE_URL: str = "postgresql://user:password@localhost:5432/docuextract"
+    REDIS_URL: str = "redis://localhost:6379/0"
+    OPENAI_API_KEY: str = ""
+    STORAGE_PATH: str = "./storage"
+    MAX_FILE_SIZE_MB: int = 10
+    LOG_LEVEL: str = "INFO"
+    VLM_MODEL: str = "gpt-4o"
+    CONFIDENCE_AUTO_APPROVE: float = 0.85
+    CONFIDENCE_REVIEW_THRESHOLD: float = 0.60
 
+    class Config:
+        env_file = ".env"
 
-@dataclass(frozen=True)
-class Settings:
-    app_env: str = os.getenv("APP_ENV", "development")
-    debug: bool = os.getenv("APP_DEBUG", "true").lower() == "true"
-    app_port: int = int(os.getenv("APP_PORT", "8000"))
-    database_url: str = os.getenv("DATABASE_URL", "sqlite:///./docuextract.db")
-    redis_url: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    secret_key: str = os.getenv("SECRET_KEY", "change-me-in-production")
-    algorithm: str = os.getenv("ALGORITHM", "HS256")
-    access_token_expire_minutes: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))
-    upload_dir: str = os.getenv("UPLOAD_DIR", "./storage/uploads")
-    processed_dir: str = os.getenv("PROCESSED_DIR", "./storage/processed")
+@lru_cache()
+def get_settings():
+    return Settings()
 
-
-settings = Settings()
-
-
-def get_settings() -> Settings:
-    return settings
+settings = get_settings()

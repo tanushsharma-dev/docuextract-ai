@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
-from app.models.database import get_db
+from app.core.database import get_db
 from app.services.document_service import DocumentService
 from app.services.storage import save_upload
 
