@@ -1,13 +1,10 @@
-from __future__ import annotations
+from app.core.database import engine, Base
+from app.models import Document, Page, ExtractionJob, ExtractedField, LineItem, HumanReview
 
-from app.core.database import Base, engine
-from app.models import document, extraction, review  # noqa: F401
-
-
-def initialize_database() -> None:
+def init():
+    print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    print("Database tables initialized.")
-
+    print("✅ Tables created successfully!")
 
 if __name__ == "__main__":
-    initialize_database()
+    init()

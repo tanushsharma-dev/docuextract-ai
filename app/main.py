@@ -1,24 +1,29 @@
-from __future__ import annotations
-
 from fastapi import FastAPI
-
-from app.api.routes.documents import router as documents_router
-from app.api.routes.evaluation import router as evaluation_router
-from app.api.routes.review import router as review_router
-from app.core.config import settings
+from fastapi.middleware.cors import CORSMiddleware
+from app.api.routes import documents, review, evaluation
 
 app = FastAPI(
     title="DocuExtract AI",
-    description="Document extraction, validation, and review platform",
-    version="0.1.0",
-    debug=settings.debug,
+    description="Multimodal Document Intelligence System",
+    version="1.0.0"
 )
 
-app.include_router(documents_router, prefix="/api/v1")
-app.include_router(review_router, prefix="/api/v1")
-app.include_router(evaluation_router, prefix="/api/v1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
+app.include_router(review.router, prefix="/api/v1/review", tags=["Review"])
+app.include_router(evaluation.router, prefix="/api/v1/evaluation", tags=["Evaluation"])
+
+@app.get("/")
+def root():
+    return {"service": "DocuExtract AI", "status": "running", "version": "1.0.0"}
 
 @app.get("/health")
-def health_check() -> dict:
-    return {"status": "ok", "environment": settings.app_env}
+def health():
+    return {"status": "healthy"}
