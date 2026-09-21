@@ -1,1 +1,1 @@
-"""Extraction pipeline components."""
+from app.extraction import preprocessing
