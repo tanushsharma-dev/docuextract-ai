@@ -1,6 +1,4 @@
-from __future__ import annotations
-
-from worker.tasks import celery_app
+from worker.tasks import worker_loop
 
 if __name__ == "__main__":
-    celery_app.start()
+    worker_loop()
