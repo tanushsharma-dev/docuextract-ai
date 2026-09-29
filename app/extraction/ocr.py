@@ -1,15 +1,20 @@
-from paddleocr import PaddleOCR
 from typing import List, Dict
 import logging
 
 logger = logging.getLogger(__name__)
 
-# Initialize PaddleOCR once
+try:
+    from paddleocr import PaddleOCR
+    PADDLE_AVAILABLE = True
+except Exception:
+    PADDLE_AVAILABLE = False
+    logger.warning("PaddleOCR not available - VLM will handle extraction")
+
 _ocr_instance = None
 
 def get_ocr():
     global _ocr_instance
-    if _ocr_instance is None:
+    if _ocr_instance is None and PADDLE_AVAILABLE:
         _ocr_instance = PaddleOCR(
             use_angle_cls=True,
             lang='en',
@@ -20,6 +25,14 @@ def get_ocr():
 
 def run_ocr(image_path: str) -> Dict:
     """Run OCR on image and return structured output."""
+    if not PADDLE_AVAILABLE:
+        return {
+            "tokens": [],
+            "full_text": "",
+            "token_count": 0,
+            "avg_confidence": 0.0
+        }
+
     ocr = get_ocr()
     result = ocr.ocr(image_path, cls=True)
 
@@ -54,7 +67,6 @@ def extract_text_blocks(ocr_result: Dict) -> List[Dict]:
     if not tokens:
         return []
 
-    # Sort by y then x
     sorted_tokens = sorted(tokens, key=lambda t: (t["bbox"]["y_min"], t["bbox"]["x_min"]))
 
     blocks = []
@@ -65,7 +77,6 @@ def extract_text_blocks(ocr_result: Dict) -> List[Dict]:
 
     for token in sorted_tokens[1:]:
         y_center = (token["bbox"]["y_min"] + token["bbox"]["y_max"]) / 2
-        # Same line if y difference < 15 pixels
         if abs(y_center - current_block["y_center"]) < 15:
             current_block["tokens"].append(token)
         else:
@@ -76,7 +87,6 @@ def extract_text_blocks(ocr_result: Dict) -> List[Dict]:
             }
     blocks.append(current_block)
 
-    # Format blocks
     formatted = []
     for block in blocks:
         texts = [t["text"] for t in block["tokens"]]

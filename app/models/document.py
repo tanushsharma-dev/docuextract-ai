@@ -1,14 +1,13 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean, Float, ForeignKey, JSON
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean, Float, ForeignKey, JSON, Uuid
 from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 class Document(Base):
     __tablename__ = "documents"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
     filename = Column(Text, nullable=False)
     mime_type = Column(String(50))
     sha256_hash = Column(String(64))
@@ -28,8 +27,8 @@ class Document(Base):
 class Page(Base):
     __tablename__ = "pages"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
     page_number = Column(Integer, nullable=False)
     image_path = Column(Text)
     width = Column(Integer)
@@ -40,8 +39,8 @@ class Page(Base):
 class ExtractionJob(Base):
     __tablename__ = "extraction_jobs"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
     status = Column(String(30), default="pending")
     model_version = Column(String(50))
     ocr_engine = Column(String(50))
@@ -55,9 +54,9 @@ class ExtractionJob(Base):
 class ExtractedField(Base):
     __tablename__ = "extracted_fields"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
-    job_id = Column(UUID(as_uuid=True), ForeignKey("extraction_jobs.id"))
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
+    job_id = Column(Uuid, ForeignKey("extraction_jobs.id"))
     field_name = Column(String(100), nullable=False)
     raw_value = Column(Text)
     normalized_value = Column(Text)
@@ -74,8 +73,8 @@ class ExtractedField(Base):
 class LineItem(Base):
     __tablename__ = "line_items"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
     description = Column(Text)
     quantity = Column(Float)
     unit_price = Column(Float)
@@ -89,8 +88,8 @@ class LineItem(Base):
 class HumanReview(Base):
     __tablename__ = "human_reviews"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id = Column(UUID(as_uuid=True), ForeignKey("documents.id"), nullable=False)
+    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
+    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
     field_name = Column(String(100), nullable=False)
     original_value = Column(Text)
     corrected_value = Column(Text)

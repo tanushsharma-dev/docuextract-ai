@@ -1,13 +1,27 @@
-import base64
 import json
 import logging
-from pathlib import Path
-from openai import OpenAI
+
+import PIL.Image
+from google import genai
+from google.genai import types
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-client = OpenAI(api_key=settings.OPENAI_API_KEY)
+_client = None
+
+
+def get_client():
+    """Initialize Gemini client once (singleton)."""
+    global _client
+    if _client is None:
+        if not settings.GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY not set in .env file!")
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        logger.info(f"Gemini client ready (model: {settings.VLM_MODEL})")
+    return _client
+
 
 INVOICE_SCHEMA = """
 {
@@ -45,15 +59,10 @@ RECEIPT_SCHEMA = """
 }
 """
 
-def encode_image(image_path: str) -> str:
-    with open(image_path, "rb") as f:
-        return base64.b64encode(f.read()).decode("utf-8")
 
-def extract_with_vlm(image_path: str, document_type: str = "invoice") -> dict:
-    """Extract structured data using Vision-Language Model."""
+def build_prompt(document_type: str) -> str:
     schema = INVOICE_SCHEMA if document_type == "invoice" else RECEIPT_SCHEMA
-
-    prompt = f"""You are a precise document extraction engine.
+    return f"""You are a precise document extraction engine.
 
 Extract structured information from this document image.
 
@@ -70,32 +79,25 @@ Schema:
 {schema}
 """
 
-    try:
-        base64_image = encode_image(image_path)
 
-        response = client.chat.completions.create(
+def extract_with_vlm(image_path: str, document_type: str = "invoice") -> dict:
+    """Extract structured data using Gemini Vision (FREE)."""
+    try:
+        client = get_client()
+        image = PIL.Image.open(image_path).convert("RGB")
+        prompt = build_prompt(document_type)
+
+        response = client.models.generate_content(
             model=settings.VLM_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/png;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=2000,
-            temperature=0.1
+            contents=[prompt, image],
+            config=types.GenerateContentConfig(
+                temperature=0.1,
+                response_mime_type="application/json",
+            ),
         )
 
-        content = response.choices[0].message.content.strip()
+        content = response.text.strip()
 
-        # Clean markdown if present
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
@@ -105,15 +107,20 @@ Schema:
         return json.loads(content)
 
     except Exception as e:
-        logger.error(f"VLM extraction failed: {e}")
+        logger.error(f"Gemini extraction failed: {e}")
         return {"error": str(e)}
+
 
 def classify_document_type(ocr_text: str) -> str:
     """Classify document type based on OCR text."""
     text_lower = ocr_text.lower()
 
-    if any(kw in text_lower for kw in ["tax invoice", "invoice no", "invoice number", "bill no"]):
+    if any(kw in text_lower for kw in [
+        "tax invoice", "invoice no", "invoice number", "bill no", "inv no"
+    ]):
         return "invoice"
-    if any(kw in text_lower for kw in ["receipt", "cash memo", "bill", "payment receipt"]):
+    if any(kw in text_lower for kw in [
+        "receipt", "cash memo", "payment receipt"
+    ]):
         return "receipt"
-    return "unknown"
+    return "invoice"

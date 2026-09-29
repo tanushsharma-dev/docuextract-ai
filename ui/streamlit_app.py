@@ -1,82 +1,106 @@
-import gradio as gr
+import streamlit as st
 import requests
-import json
-from pathlib import Path
 
 API_BASE = "http://localhost:8000/api/v1"
 
-def list_pending_documents():
+st.set_page_config(
+    page_title="DocuExtract AI - Review",
+    page_icon="📄",
+    layout="wide"
+)
+
+st.title("📄 DocuExtract AI - Human Review Console")
+
+# Sidebar - document selection
+with st.sidebar:
+    st.header("📋 Pending Documents")
+
+    if st.button("🔄 Refresh List"):
+        st.rerun()
+
+    selected_doc_id = None
     try:
-        r = requests.get(f"{API_BASE}/review/pending")
-        if r.status_code == 200:
-            docs = r.json()
-            return "\n".join([f"{d['document_id']} - {d['filename']}" for d in docs])
+        response = requests.get(f"{API_BASE}/review/pending")
+        if response.status_code == 200:
+            docs = response.json()
+            if docs:
+                doc_options = {
+                    f"{d['document_id'][:8]}... - {d['filename']}": d['document_id']
+                    for d in docs
+                }
+                selected_label = st.selectbox("Select Document", list(doc_options.keys()))
+                selected_doc_id = doc_options[selected_label]
+            else:
+                st.info("No pending documents")
+        else:
+            st.error("Failed to fetch documents")
     except Exception as e:
-        return f"Error: {e}"
-    return "No pending documents"
+        st.error(f"API not reachable: {str(e)}")
 
-def load_document(doc_id: str):
+# Main content
+if selected_doc_id:
     try:
-        r = requests.get(f"{API_BASE}/review/{doc_id}")
-        if r.status_code == 200:
-            data = r.json()
-            fields_text = "\n".join([
-                f"{f['field_name']}: {f['value']} (conf: {f['confidence']:.2f}) {'⚠️' if f['requires_review'] else '✅'}"
-                for f in data["fields"]
-            ])
-            image_path = data.get("storage_path")
-            return image_path, fields_text, doc_id
-    except Exception as e:
-        return None, f"Error: {e}", ""
-    return None, "Not found", ""
+        doc_response = requests.get(f"{API_BASE}/review/{selected_doc_id}")
+        if doc_response.status_code == 200:
+            doc_data = doc_response.json()
 
-def submit_corrections(doc_id: str, corrections_text: str, reviewer: str):
-    try:
-        corrections = {}
-        for line in corrections_text.strip().split("\n"):
-            if ":" in line:
-                key, val = line.split(":", 1)
-                corrections[key.strip()] = val.strip()
+            col1, col2 = st.columns(2)
 
-        payload = {
-            "corrections": corrections,
-            "review_status": "approved",
-            "reviewer_name": reviewer or "anonymous"
-        }
-        r = requests.post(f"{API_BASE}/review/{doc_id}", json=payload)
-        if r.status_code == 200:
-            return "✅ Review submitted successfully!"
-        return f"❌ Error: {r.text}"
-    except Exception as e:
-        return f"❌ Error: {e}"
+            with col1:
+                st.markdown("### 📎 Document Preview")
+                if doc_data.get("storage_path"):
+                    st.image(doc_data["storage_path"], use_container_width=True)
+                else:
+                    st.warning("No preview available")
 
-with gr.Blocks(title="DocuExtract Review") as demo:
-    gr.Markdown("# 📄 DocuExtract AI — Human Review Console")
+            with col2:
+                st.markdown("### 📊 Extracted Fields")
 
-    with gr.Row():
-        with gr.Column(scale=1):
-            refresh_btn = gr.Button("🔄 Refresh Pending")
-            pending_list = gr.Textbox(label="Pending Documents", lines=10, interactive=False)
-            doc_id_input = gr.Textbox(label="Document ID")
-            load_btn = gr.Button("📂 Load Document")
+                corrections = {}
+                for field in doc_data.get("fields", []):
+                    field_name = field["field_name"]
+                    value = field["value"]
+                    confidence = field["confidence"]
 
-        with gr.Column(scale=2):
-            doc_image = gr.Image(label="Document Preview", type="filepath")
-            fields_display = gr.Textbox(label="Extracted Fields", lines=10, interactive=False)
+                    if confidence >= 0.85:
+                        status = "✅"
+                    elif confidence >= 0.60:
+                        status = "⚠️"
+                    else:
+                        status = "❌"
 
-        with gr.Column(scale=1):
-            corrections_input = gr.Textbox(
-                label="Corrections (field: value per line)",
-                lines=10,
-                placeholder="total_amount: 2360\ninvoice_date: 2026-01-15"
-            )
-            reviewer_input = gr.Textbox(label="Your Name", value="reviewer")
-            submit_btn = gr.Button("✅ Submit Review")
-            status_output = gr.Textbox(label="Status", interactive=False)
+                    st.markdown(f"**{field_name}** {status} (confidence: {confidence:.2f})")
 
-    refresh_btn.click(list_pending_documents, outputs=pending_list)
-    load_btn.click(load_document, inputs=doc_id_input, outputs=[doc_image, fields_display, doc_id_input])
-    submit_btn.click(submit_corrections, inputs=[doc_id_input, corrections_input, reviewer_input], outputs=status_output)
+                    new_value = st.text_input(
+                        f"Edit {field_name}",
+                        value=value if value else "",
+                        key=f"edit_{field_name}"
+                    )
 
-if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+                    if new_value != (value or ""):
+                        corrections[field_name] = new_value
+
+                    st.divider()
+
+            st.markdown("### ✅ Review Actions")
+            colA, colB = st.columns(2)
+            with colA:
+                reviewer_name = st.text_input("Reviewer Name", value="anonymous")
+            with colB:
+                review_status = st.selectbox(
+                    "Status", ["approved", "rejected", "needs_more_info"]
+                )
+
+            if st.button("✅ Submit Review", type="primary"):
+                payload = {
+                    "corrections": corrections,
+                    "review_status": review_status,
+                    "reviewer_name": reviewer_name
+                }
+                submit_response = requests.post(
+                    f"{API_BASE}/review/{selected_doc_id}", json=payload
+                )
+                if submit_response.status_code == 200:
+                    st.success("✅ Review submitted!")
+                    st.rerun()
+                else:
