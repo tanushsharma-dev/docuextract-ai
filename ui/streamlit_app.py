@@ -1,106 +1,140 @@
 import streamlit as st
 import requests
 
-API_BASE = "http://localhost:8000/api/v1"
+API_ROOT = "http://localhost:8000"
+API_BASE = API_ROOT + "/api/v1"
 
-st.set_page_config(
-    page_title="DocuExtract AI - Review",
-    page_icon="📄",
-    layout="wide"
-)
+st.set_page_config(page_title="DocuExtract AI - Review", page_icon="📄", layout="wide")
 
-st.title("📄 DocuExtract AI - Human Review Console")
+st.title("📄 DocuExtract AI — Human Review Console")
 
-# Sidebar - document selection
+
+def find_upload_path():
+    """API se khud upload endpoint ka path puchna."""
+    try:
+        spec = requests.get(f"{API_ROOT}/openapi.json", timeout=5).json()
+        for path, methods in spec.get("paths", {}).items():
+            if "post" in methods and ("document" in path or "upload" in path):
+                return path
+    except Exception:
+        pass
+    return None
+
+
+# ---------- Sidebar: Upload + Pending ----------
 with st.sidebar:
-    st.header("📋 Pending Documents")
+    st.header("📤 Upload Document")
+    uploaded_file = st.file_uploader(
+        "Invoice / Receipt choose karo",
+        type=["png", "jpg", "jpeg", "webp", "tiff", "pdf"]
+    )
+    if uploaded_file is not None:
+        if st.button("🚀 Upload & Process", type="primary"):
+            upload_path = find_upload_path()
+            if upload_path is None:
+                st.error("❌ Upload endpoint API me nahi mila! Uvicorn RESTART karo (Ctrl+C karke dobara chalao)")
+            else:
+                with st.spinner(f"Processing via {upload_path} ... (30-60 sec)"):
+                    files = {
+                        "file": (
+                            uploaded_file.name,
+                            uploaded_file.getvalue(),
+                            uploaded_file.type
+                        )
+                    }
+                    try:
+                        resp = requests.post(f"{API_ROOT}{upload_path}", files=files, timeout=180)
+                        if resp.status_code == 200:
+                            doc_id = resp.json()["document_id"]
+                            st.success(f"✅ Processed! ID: {doc_id[:8]}...")
+                            st.rerun()
+                        else:
+                            st.error(f"Upload failed: {resp.text}")
+                    except Exception as e:
+                        st.error(f"Error: {e}")
 
+    st.markdown("---")
+    st.header("📋 Pending Documents")
     if st.button("🔄 Refresh List"):
         st.rerun()
 
     selected_doc_id = None
     try:
-        response = requests.get(f"{API_BASE}/review/pending")
-        if response.status_code == 200:
-            docs = response.json()
-            if docs:
-                doc_options = {
-                    f"{d['document_id'][:8]}... - {d['filename']}": d['document_id']
-                    for d in docs
-                }
-                selected_label = st.selectbox("Select Document", list(doc_options.keys()))
-                selected_doc_id = doc_options[selected_label]
-            else:
-                st.info("No pending documents")
-        else:
-            st.error("Failed to fetch documents")
-    except Exception as e:
-        st.error(f"API not reachable: {str(e)}")
+        response = requests.get(f"{API_BASE}/review/pending", timeout=5)
+        docs = response.json() if response.status_code == 200 else []
+    except Exception:
+        docs = []
+        st.error("API not reachable - kya uvicorn chal raha hai?")
 
-# Main content
+    if docs:
+        options = {f"{d['filename']} ({d['document_id'][:8]}...)": d["document_id"] for d in docs}
+        choice = st.selectbox("Select document", list(options.keys()))
+        selected_doc_id = options[choice]
+    else:
+        st.info("No pending documents")
+
+# ---------- Main Area ----------
 if selected_doc_id:
     try:
-        doc_response = requests.get(f"{API_BASE}/review/{selected_doc_id}")
-        if doc_response.status_code == 200:
-            doc_data = doc_response.json()
+        r = requests.get(f"{API_BASE}/review/{selected_doc_id}", timeout=10)
+        data = r.json()
 
-            col1, col2 = st.columns(2)
+        st.subheader(f"Reviewing: {data['filename']}")
 
-            with col1:
-                st.markdown("### 📎 Document Preview")
-                if doc_data.get("storage_path"):
-                    st.image(doc_data["storage_path"], use_container_width=True)
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("### 📎 Document Preview")
+            if data.get("storage_path"):
+                try:
+                    st.image(data["storage_path"], use_container_width=True)
+                except Exception:
+                    st.warning("Preview not available")
+
+        with col2:
+            st.markdown("### 📊 Extracted Fields")
+            corrections = {}
+            for field in data.get("fields", []):
+                name = field["field_name"]
+                value = str(field["value"] or "")
+                conf = float(field.get("confidence") or 0)
+
+                if conf >= 0.85:
+                    badge = "✅"
+                elif conf >= 0.60:
+                    badge = "⚠️"
                 else:
-                    st.warning("No preview available")
+                    badge = "❌"
 
-            with col2:
-                st.markdown("### 📊 Extracted Fields")
+                st.markdown(f"**{name}** {badge} (confidence: {conf:.0%})")
+                new_val = st.text_input(f"Edit {name}", value=value, key=f"edit_{name}")
+                if new_val != value:
+                    corrections[name] = new_val
 
-                corrections = {}
-                for field in doc_data.get("fields", []):
-                    field_name = field["field_name"]
-                    value = field["value"]
-                    confidence = field["confidence"]
+        st.markdown("### ✅ Review Actions")
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            reviewer = st.text_input("Reviewer name", value="anonymous")
+        with c2:
+            status = st.selectbox("Status", ["approved", "rejected", "needs_more_info"])
+        with c3:
+            comments = st.text_input("Comments", value="")
 
-                    if confidence >= 0.85:
-                        status = "✅"
-                    elif confidence >= 0.60:
-                        status = "⚠️"
-                    else:
-                        status = "❌"
+        if st.button("✅ Submit Review", type="primary"):
+            payload = {
+                "corrections": corrections,
+                "review_status": status,
+                "reviewer_name": reviewer,
+                "comments": comments,
+            }
+            sr = requests.post(f"{API_BASE}/review/{selected_doc_id}", json=payload, timeout=10)
+            if sr.status_code == 200:
+                st.success("Review submitted!")
+                st.rerun()
+            else:
+                st.error(f"Failed: {sr.text}")
 
-                    st.markdown(f"**{field_name}** {status} (confidence: {confidence:.2f})")
-
-                    new_value = st.text_input(
-                        f"Edit {field_name}",
-                        value=value if value else "",
-                        key=f"edit_{field_name}"
-                    )
-
-                    if new_value != (value or ""):
-                        corrections[field_name] = new_value
-
-                    st.divider()
-
-            st.markdown("### ✅ Review Actions")
-            colA, colB = st.columns(2)
-            with colA:
-                reviewer_name = st.text_input("Reviewer Name", value="anonymous")
-            with colB:
-                review_status = st.selectbox(
-                    "Status", ["approved", "rejected", "needs_more_info"]
-                )
-
-            if st.button("✅ Submit Review", type="primary"):
-                payload = {
-                    "corrections": corrections,
-                    "review_status": review_status,
-                    "reviewer_name": reviewer_name
-                }
-                submit_response = requests.post(
-                    f"{API_BASE}/review/{selected_doc_id}", json=payload
-                )
-                if submit_response.status_code == 200:
-                    st.success("✅ Review submitted!")
-                    st.rerun()
-                else:
+    except Exception as e:
+        st.error(f"Error loading document: {e}")
+else:
+    st.info("👈 Sidebar se document upload karo ya select karo")

@@ -1,72 +1,85 @@
-from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
+from pydantic import BaseModel
+from typing import Dict, Optional
 from app.core.database import get_db
-from app.models import Document
-from app.services.storage import save_uploaded_file
-from app.services.queue import enqueue_extraction_job
+from app.models import Document, HumanReview, ExtractedField
 
 router = APIRouter()
 
-@router.post("/")
-async def upload_document(
-    file: UploadFile = File(...),
-    db: Session = Depends(get_db)
-):
-    # Validate file type
-    allowed_types = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp", "image/tiff"]
-    if file.content_type not in allowed_types:
-        raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
 
-    # Save file
-    storage_path = await save_uploaded_file(file)
+class ReviewSubmission(BaseModel):
+    corrections: Dict[str, str]
+    review_status: str = "approved"
+    reviewer_name: str = "anonymous"
+    comments: Optional[str] = None
 
-    # Create document record
-    doc = Document(
-        filename=file.filename,
-        mime_type=file.content_type,
-        storage_path=storage_path,
-        status="uploaded"
-    )
-    db.add(doc)
-    db.commit()
-    db.refresh(doc)
 
-    # Queue extraction job
-    enqueue_extraction_job(str(doc.id))
+@router.get("/pending")
+def get_pending_reviews(db: Session = Depends(get_db)):
+    docs = db.query(Document).filter(Document.status == "needs_review").all()
+    return [{"document_id": str(d.id), "filename": d.filename} for d in docs]
 
-    return {
-        "document_id": str(doc.id),
-        "status": "uploaded",
-        "message": "Document received. Processing queued."
-    }
 
 @router.get("/{document_id}")
-def get_document(document_id: UUID, db: Session = Depends(get_db)):
+def get_review_data(document_id: UUID, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+
+    fields = db.query(ExtractedField).filter(
+        ExtractedField.document_id == document_id
+    ).all()
+
     return {
         "document_id": str(doc.id),
         "filename": doc.filename,
-        "status": doc.status,
-        "document_type": doc.document_type,
-        "page_count": doc.page_count
+        "storage_path": doc.storage_path,
+        "fields": [
+            {
+                "field_name": f.field_name,
+                "value": f.normalized_value,
+                "confidence": f.confidence,
+                "requires_review": f.requires_review
+            }
+            for f in fields
+        ]
     }
 
-@router.get("/")
-def list_documents(status: str = None, db: Session = Depends(get_db)):
-    query = db.query(Document)
-    if status:
-        query = query.filter(Document.status == status)
-    docs = query.order_by(Document.created_at.desc()).limit(50).all()
-    return [
-        {
-            "document_id": str(d.id),
-            "filename": d.filename,
-            "status": d.status,
-            "document_type": d.document_type,
-            "created_at": d.created_at.isoformat()
-        }
-        for d in docs
-    ]
+
+@router.post("/{document_id}")
+def submit_review(document_id: UUID, data: ReviewSubmission, db: Session = Depends(get_db)):
+    doc = db.query(Document).filter(Document.id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    for field_name, corrected_value in data.corrections.items():
+        field = db.query(ExtractedField).filter(
+            ExtractedField.document_id == document_id,
+            ExtractedField.field_name == field_name
+        ).first()
+
+        original = field.normalized_value if field else None
+
+        review = HumanReview(
+            document_id=document_id,
+            field_name=field_name,
+            original_value=original,
+            corrected_value=corrected_value,
+            reviewer_name=data.reviewer_name,
+            review_status=data.review_status,
+            comments=data.comments
+        )
+        db.add(review)
+
+        if field:
+            field.normalized_value = corrected_value
+            field.requires_review = False
+            field.confidence = 1.0
+            field.source = "human"
+
+    doc.status = "reviewed"
+    db.commit()
+
+    return {"status": "success", "message": "Review saved"}

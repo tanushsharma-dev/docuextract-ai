@@ -11,58 +11,69 @@ logger = logging.getLogger(__name__)
 
 _client = None
 
+SUPPORTED_TYPES = ["invoice", "receipt", "bank_statement", "id_card", "form"]
 
-def get_client():
-    """Initialize Gemini client once (singleton)."""
-    global _client
-    if _client is None:
-        if not settings.GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY not set in .env file!")
-        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
-        logger.info(f"Gemini client ready (model: {settings.VLM_MODEL})")
-    return _client
-
-
-INVOICE_SCHEMA = """
+SCHEMAS = {
+    "invoice": """
 {
   "vendor_name": "string or null",
   "invoice_number": "string or null",
   "invoice_date": "YYYY-MM-DD or null",
-  "due_date": "YYYY-MM-DD or null",
   "currency": "3-letter code or null",
   "subtotal": "number or null",
   "tax": "number or null",
   "total_amount": "number or null",
   "customer_name": "string or null",
-  "payment_terms": "string or null",
-  "line_items": [
-    {
-      "description": "string",
-      "quantity": "number",
-      "unit_price": "number",
-      "amount": "number"
-    }
-  ]
+  "line_items": [{"description": "string", "quantity": "number", "unit_price": "number", "amount": "number"}]
 }
-"""
-
-RECEIPT_SCHEMA = """
+""",
+    "receipt": """
 {
   "merchant_name": "string or null",
   "receipt_date": "YYYY-MM-DD or null",
   "total_amount": "number or null",
   "tax": "number or null",
   "payment_method": "string or null",
-  "items": [
-    {"description": "string", "amount": "number"}
-  ]
+  "currency": "3-letter code or null",
+  "items": [{"description": "string", "amount": "number"}]
+}
+""",
+    "bank_statement": """
+{
+  "bank_name": "string or null",
+  "account_holder": "string or null",
+  "account_number": "string or null",
+  "statement_period": "string or null",
+  "opening_balance": "number or null",
+  "closing_balance": "number or null",
+  "currency": "3-letter code or null",
+  "transactions": [{"date": "YYYY-MM-DD", "description": "string", "amount": "number"}]
+}
+""",
+    "id_card": """
+{
+  "full_name": "string or null",
+  "id_number": "string or null",
+  "date_of_birth": "YYYY-MM-DD or null",
+  "issue_date": "YYYY-MM-DD or null",
+  "expiry_date": "YYYY-MM-DD or null",
+  "address": "string or null",
+  "document_type": "string or null"
+}
+""",
+    "form": """
+{
+  "form_title": "string or null",
+  "full_name": "string or null",
+  "email": "string or null",
+  "phone": "string or null",
+  "date": "YYYY-MM-DD or null",
+  "organization": "string or null"
 }
 """
+}
 
-
-def build_prompt(document_type: str) -> str:
-    schema = INVOICE_SCHEMA if document_type == "invoice" else RECEIPT_SCHEMA
-    return f"""You are a precise document extraction engine.
+RULES = """You are a precise document extraction engine.
 
 Extract structured information from this document image.
 
@@ -74,14 +85,25 @@ Rules:
 5. Amounts must be numbers without currency symbols.
 6. Currency must be a 3-letter code if visible.
 7. If unsure, prefer null over guessing.
-
-Schema:
-{schema}
 """
 
 
+def get_client():
+    global _client
+    if _client is None:
+        if not settings.GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY not set in .env file!")
+        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        logger.info(f"Gemini client ready (model: {settings.VLM_MODEL})")
+    return _client
+
+
+def build_prompt(document_type: str) -> str:
+    schema = SCHEMAS.get(document_type, SCHEMAS["invoice"])
+    return RULES + "\nSchema:\n" + schema
+
+
 def extract_with_vlm(image_path: str, document_type: str = "invoice") -> dict:
-    """Extract structured data using Gemini Vision (FREE)."""
     try:
         client = get_client()
         image = PIL.Image.open(image_path).convert("RGB")
@@ -97,7 +119,6 @@ def extract_with_vlm(image_path: str, document_type: str = "invoice") -> dict:
         )
 
         content = response.text.strip()
-
         if content.startswith("```"):
             content = content.split("```")[1]
             if content.startswith("json"):
@@ -112,15 +133,11 @@ def extract_with_vlm(image_path: str, document_type: str = "invoice") -> dict:
 
 
 def classify_document_type(ocr_text: str) -> str:
-    """Classify document type based on OCR text."""
     text_lower = ocr_text.lower()
-
-    if any(kw in text_lower for kw in [
-        "tax invoice", "invoice no", "invoice number", "bill no", "inv no"
-    ]):
-        return "invoice"
-    if any(kw in text_lower for kw in [
-        "receipt", "cash memo", "payment receipt"
-    ]):
+    if any(k in text_lower for k in ["bank statement", "account statement", "statement of account"]):
+        return "bank_statement"
+    if any(k in text_lower for k in ["passport", "driving license", "identity card", "aadhaar", "id card"]):
+        return "id_card"
+    if any(k in text_lower for k in ["receipt", "cash memo", "payment receipt"]):
         return "receipt"
     return "invoice"

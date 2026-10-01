@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DocuExtract AI — Multimodal Document Intelligence</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body {
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(6,182,212,.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(168,85,247,.12) 0%, transparent 50%),
+      linear-gradient(135deg, #020617 0%, #0a1628 50%, #050b1a 100%);
+    background-attachment: fixed; min-height: 100vh;
+  }
+  .glass { background: rgba(15,23,42,.6); backdrop-filter: blur(20px); border: 1px solid rgba(148,163,184,.1); }
+  .hero-title { font-size: clamp(2.5rem,6vw,4.5rem); line-height:.95; letter-spacing:-.04em; font-weight:700;
+    background: linear-gradient(135deg,#fff,#94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .gradient-text { background: linear-gradient(135deg,#06b6d4,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  @keyframes spin-slow { to{transform:rotate(360deg)} }
+  .float{animation:float 4s ease-in-out infinite} .spin-slow{animation:spin-slow 3s linear infinite}
+  .confidence-high{background:rgba(16,185,129,.1);color:#34d399;border-color:rgba(16,185,129,.3)}
+  .confidence-mid{background:rgba(245,158,11,.1);color:#fbbf24;border-color:rgba(245,158,11,.3)}
+  .confidence-low{background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3)}
+  .doc-tab{transition:all .3s} .doc-tab-active{background:linear-gradient(135deg,#06b6d4,#10b981);color:#fff;box-shadow:0 5px 25px rgba(6,182,212,.4)}
+  .viz-tab{border-bottom:2px solid transparent} .viz-tab-active{border-color:#06b6d4;color:#fff}
+  .dropzone-active{border-color:#06b6d4 !important;background:rgba(6,182,212,.05) !important}
+  .field-card{transition:all .3s} .field-card:hover{transform:translateY(-2px)}
+</style>
+</head>
+<body class="text-slate-100">
+
+<nav class="sticky top-0 z-50 glass border-b border-slate-800/50">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center font-bold text-lg">D</div>
+      <div>
+        <h1 class="font-semibold">DocuExtract <span class="gradient-text">AI</span></h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest">Document Intelligence</p>
+      </div>
+    </div>
+    <span id="apiBadge" class="text-xs px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">● API checking…</span>
+  </div>
+</nav>
+
+<section class="max-w-7xl mx-auto px-6 pt-14 pb-8 text-center">
+  <h1 class="hero-title mb-4">Understand: <span class="gradient-text">Try Our AI Extraction</span></h1>
+  <p class="text-lg text-slate-400">Click any document type — watch AI extract every field with confidence</p>
+</section>
+
+<div class="max-w-5xl mx-auto px-6 mb-8">
+  <div class="glass rounded-full p-2 flex flex-wrap justify-center gap-1">
+    <button type="button" data-type="receipt" class="doc-tab doc-tab-active px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Receipt</button>
+    <button type="button" data-type="invoice" class="doc-tab px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Invoice</button>
+    <button type="button" data-type="bank_statement" class="doc-tab px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Bank Statement</button>
+    <button type="button" data-type="id_card" class="doc-tab px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">ID Card</button>
+    <button type="button" data-type="form" class="doc-tab px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Form</button>
+  </div>
+</div>
+
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="glass rounded-3xl p-6 md:p-8">
+
+    <div id="dropzone" class="border-2 border-dashed border-slate-700 rounded-2xl p-8 text-center hover:border-cyan-500/50 transition cursor-pointer mb-8">
+      <div class="flex items-center justify-center gap-4">
+        <div class="text-3xl">⬆️</div>
+        <div class="text-left">
+          <p class="font-medium">Drag or upload your own document here</p>
+          <p class="text-xs text-slate-400 mt-1">[JPEG, PNG or PDF] — ya upar sample tab click karo</p>
+        </div>
+      </div>
+      <input type="file" id="fileInput" hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.tiff" />
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div>
+        <div id="noDoc" class="h-full min-h-[300px] flex items-center justify-center text-slate-500 text-sm border border-slate-800 rounded-2xl">
+          📄 Select a tab above to load a sample document
+        </div>
+        <div id="preview" class="hidden">
+          <div class="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-t-xl px-4 py-2 text-sm text-slate-300">
+            <span>🔍</span><span class="px-3 py-0.5 bg-slate-800 rounded">1</span><span class="text-slate-500">of 1</span>
+            <span class="ml-auto text-xs text-slate-500" id="fileName"></span>
+          </div>
+          <div class="bg-white rounded-b-xl overflow-hidden border border-t-0 border-slate-700 max-h-[600px] overflow-y-auto">
+            <img id="docImage" class="w-full" alt="Document" />
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex gap-6 mb-5 border-b border-slate-800">
+          <button type="button" id="vizTab" class="viz-tab viz-tab-active pb-2 text-sm font-medium text-slate-400">Visualized Data</button>
+          <button type="button" id="jsonTab" class="viz-tab pb-2 text-sm font-medium text-slate-400">JSON Data</button>
+        </div>
+
+        <div id="emptyState" class="border border-slate-800 rounded-2xl p-10 text-center">
+          <div class="text-5xl mb-4 float">🤖</div>
+          <p class="font-medium mb-2">Awaiting document</p>
+          <p class="text-sm text-slate-400">Tab click karo ya apna document upload karo</p>
+        </div>
+
+        <div id="loadingState" class="hidden border border-slate-800 rounded-2xl p-10 text-center">
+          <div class="spin-slow text-5xl mb-4 inline-block">⚙️</div>
+          <p class="font-medium mb-2">Gemini is analyzing…</p>
+          <p class="text-sm text-slate-400">30-60 seconds — page band MAT karo</p>
+        </div>
+
+        <div id="errorState" class="hidden border border-rose-500/30 rounded-2xl p-8 text-center bg-rose-500/5">
+          <div class="text-4xl mb-3">⚠️</div>
+          <p class="font-medium text-rose-300 mb-2">Something went wrong</p>
+          <p id="errorMsg" class="text-sm text-slate-400 font-mono break-words"></p>
+        </div>
+
+        <div id="resultsState" class="hidden space-y-5">
+          <div class="flex items-center justify-between">
+            <span id="statusChip" class="text-xs px-3 py-1.5 rounded-full border font-medium"></span>
+            <span id="typeChip" class="text-xs px-3 py-1.5 rounded-full glass text-slate-300"></span>
+          </div>
+          <div class="bg-white text-slate-900 rounded-2xl p-6 text-center shadow-xl">
+            <div class="text-4xl mb-3" id="heroIcon">🏢</div>
+            <div class="text-2xl font-semibold" id="heroName">—</div>
+            <div class="text-xs uppercase tracking-widest text-slate-500 mt-1" id="heroLabel"></div>
+          </div>
+          <div id="fieldsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+          <div id="itemsBox" class="hidden">
+            <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">≡ Line Items</p>
+            <div class="rounded-xl border border-slate-800 overflow-x-auto">
+              <table class="w-full text-sm">
+                <thead id="itemsHead" class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider"></thead>
+                <tbody id="itemsBody" class="divide-y divide-slate-800"></tbody>
+              </table>
+            </div>
+          </div>
+          <pre id="jsonView" class="hidden text-xs bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-auto max-h-[500px] font-mono text-emerald-300"></pre>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="border-t border-slate-800/50">
+  <div class="max-w-7xl mx-auto px-6 py-6 text-sm text-slate-400 flex justify-between">
+    <span>DocuExtract AI · FastAPI + Gemini + Neon</span>
+    <a href="/docs" target="_blank" class="hover:text-white">API Docs →</a>
+  </div>
+</footer>
+
+<script>
+var API = "/api/v1";
+var $ = function(id){ return document.getElementById(id); };
+
+var HERO = {
+  invoice: { field: "vendor_name", label: "Vendor", icon: "🏢" },
+  receipt: { field: "merchant_name", label: "Merchant", icon: "🛒" },
+  bank_statement: { field: "bank_name", label: "Bank", icon: "🏦" },
+  id_card: { field: "full_name", label: "Card Holder", icon: "🪪" },
+  form: { field: "form_title", label: "Form", icon: "📋" }
+};
+
+// API health badge
+fetch("/health").then(function(r){
+  if (r.ok) {
+    $("apiBadge").textContent = "● Gemini · Neon · Live";
+    $("apiBadge").className = "text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+  }
+}).catch(function(){ $("apiBadge").textContent = "● API OFFLINE — uvicorn chalao"; });
+
+function show(name){
+  $("emptyState").className = (name==="empty") ? "border border-slate-800 rounded-2xl p-10 text-center" : "hidden";
+  $("loadingState").className = (name==="loading") ? "border border-slate-800 rounded-2xl p-10 text-center" : "hidden";
+  $("errorState").className = (name==="error") ? "border border-rose-500/30 rounded-2xl p-8 text-center bg-rose-500/5" : "hidden";
+  $("resultsState").className = (name==="results") ? "space-y-5" : "hidden";
+}
+
+function fail(msg){
+  console.error("DocuExtract:", msg);
+  $("errorMsg").textContent = msg;
+  show("error");
+}
+
+// Tabs
+var tabs = document.querySelectorAll(".doc-tab");
+for (var t = 0; t < tabs.length; t++) {
+  tabs[t].addEventListener("click", function(){
+    for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove("doc-tab-active");
+    this.classList.add("doc-tab-active");
+    runSample(this.getAttribute("data-type"));
+  });
+}
+
+$("vizTab").onclick = function(){ switchViz(true); };
+$("jsonTab").onclick = function(){ switchViz(false); };
+function switchViz(viz){
+  $("vizTab").classList.toggle("viz-tab-active", viz);
+  $("jsonTab").classList.toggle("viz-tab-active", !viz);
+  $("jsonView").classList.toggle("hidden", viz);
+  $("fieldsGrid").classList.toggle("hidden", !viz);
+  if (!viz) $("itemsBox").classList.add("hidden");
+}
+
+// Upload own file
+var dropzone = $("dropzone"), fileInput = $("fileInput");
+dropzone.onclick = function(){ fileInput.click(); };
+fileInput.onchange = function(){ if (fileInput.files[0]) uploadCustom(fileInput.files[0]); };
+dropzone.ondragover = function(e){ e.preventDefault(); dropzone.classList.add("dropzone-active"); };
+dropzone.ondragleave = function(){ dropzone.classList.remove("dropzone-active"); };
+dropzone.ondrop = function(e){
+  e.preventDefault(); dropzone.classList.remove("dropzone-active");
+  if (e.dataTransfer.files[0]) uploadCustom(e.dataTransfer.files[0]);
+};
+
+function uploadCustom(file){
+  show("loading");
+  $("noDoc").classList.add("hidden");
+  $("preview").classList.remove("hidden");
+  window.lastUploadURL = URL.createObjectURL(file);
+  $("docImage").src = window.lastUploadURL;
+  $("fileName").textContent = file.name;
+  var fd = new FormData();
+  fd.append("file", file);
+  fd.append("document_type", "auto");
+  send(fd);
+}
+
+function runSample(type){
+  show("loading");
+  var url = "/storage/samples/sample_" + type + ".png";
+  $("noDoc").classList.add("hidden");
+  $("preview").classList.remove("hidden");
+  $("docImage").src = url;
+  $("fileName").textContent = "sample_" + type + ".png";
+
+  fetch(url).then(function(r){
+    if (!r.ok) { fail("Sample not found (404) → chalao: python scripts/generate_samples.py"); return; }
+    return r.blob();
+  }).then(function(blob){
+    if (!blob) return;
+    var fd = new FormData();
+    fd.append("file", new File([blob], "sample_" + type + ".png", { type: "image/png" }));
+    fd.append("document_type", type);
+    send(fd);
+  }).catch(function(e){ fail("Network error: " + e.message); });
+}
+
+function send(fd){
+  fetch(API + "/documents/", { method: "POST", body: fd }).then(function(res){
+    return res.json().then(function(data){ return { ok: res.ok, status: res.status, data: data }; });
+  }).then(function(out){
+    if (!out.ok) { fail("API error " + out.status + ": " + JSON.stringify(out.data)); return; }
+    loadResults(out.data.document_id);
+  }).catch(function(e){
+    fail("API not reachable: " + e.message + " → uvicorn restart karo");
+  });
+}
+
+function loadResults(id){
+  fetch(API + "/documents/" + id + "/extraction").then(function(r){ return r.json(); }).then(function(data){
+
+    // PDF/Image preview: pipeline ka render kiya hua page_1.png dikhao
+    var img = $("docImage");
+    img.onerror = function(){ img.onerror = null; if (window.lastUploadURL) img.src = window.lastUploadURL; };
+    img.src = "/storage/processed/" + id + "/page_1.png";
+
+    var map = {
+      extracted: ["✓ Auto-Approved", "confidence-high"],
+      needs_review: ["⚠ Needs Review", "confidence-mid"],
+      reviewed: ["✓ Approved", "confidence-high"],
+      failed: ["✕ Failed", "confidence-low"]
+    };
+    var s = map[data.status] || map.extracted;
+    $("statusChip").textContent = s[0];
+    $("statusChip").className = "text-xs px-3 py-1.5 rounded-full border font-medium " + s[1];
+    $("typeChip").textContent = "📑 " + (data.document_type || "unknown").replace(/_/g, " ");
+
+    var type = data.document_type || "invoice";
+    var hc = HERO[type] || HERO.invoice;
+    var hf = (data.fields || {})[hc.field];
+    $("heroIcon").textContent = hc.icon;
+    $("heroName").textContent = hf ? hf.value : "—";
+    $("heroLabel").textContent = hc.label;
+
+    var grid = $("fieldsGrid");
+    grid.innerHTML = "";
+    var fields = data.fields || {};
+    for (var name in fields) {
+      if (name === hc.field) continue;
+      var f = fields[name];
+      var conf = f.confidence || 0;
+      var cls = conf >= 0.85 ? "confidence-high" : conf >= 0.6 ? "confidence-mid" : "confidence-low";
+      var div = document.createElement("div");
+      div.className = "field-card glass rounded-xl p-4";
+      div.innerHTML =
+        '<div class="flex justify-between items-center mb-1.5 gap-2">' +
+        '<span class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">' + name.replace(/_/g, " ") + '</span>' +
+        '<span class="text-[10px] px-2 py-0.5 rounded-full border ' + cls + ' font-medium">' + Math.round(conf * 100) + '%</span>' +
+        '</div><div class="font-medium text-sm break-words">' + (f.value != null ? f.value : "—") + '</div>';
+      grid.appendChild(div);
+    }
+
+    var items = data.line_items || [];
+    if (items.length) {
+      $("itemsBox").classList.remove("hidden");
+      var keys = Object.keys(items[0]);
+      var head = "<tr>";
+      for (var a = 0; a < keys.length; a++) head += '<th class="text-left px-4 py-2.5">' + keys[a].replace(/_/g, " ") + '</th>';
+      head += "</tr>";
+      var body = "";
+      for (var b = 0; b < items.length; b++) {
+        body += "<tr>";
+        for (var c = 0; c < keys.length; c++) body += '<td class="px-4 py-2.5">' + (items[b][keys[c]] != null ? items[b][keys[c]] : "—") + '</td>';
+        body += "</tr>";
+      }
+      $("itemsHead").innerHTML = head;
+      $("itemsBody").innerHTML = body;
+    } else {
+      $("itemsBox").classList.add("hidden");
+    }
+
+    $("jsonView").textContent = JSON.stringify(data, null, 2);
+    switchViz(true);
+    show("results");
+  }).catch(function(e){ fail("Extraction load fail: " + e.message); });
+}
+</script>
+</body>
+</html>
