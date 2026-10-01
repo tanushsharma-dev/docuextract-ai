@@ -1,0 +1,14 @@
+{
+  "image_path": "data/raw/sample_invoice.png",
+  "document_type": "invoice",
+  "vendor_name": "ACME SUPPLIES PVT LTD",
+  "invoice_number": "INV-2043",
+  "invoice_date": "2026-01-15",
+  "subtotal": 2000.0,
+  "tax": 360.0,
+  "total_amount": 2360.0,
+  "currency": "INR",
+  "line_items": [
+    {"description": "Laptop Stand", "quantity": 2, "unit_price": 1000.0, "amount": 2000.0}
+  ]
+}

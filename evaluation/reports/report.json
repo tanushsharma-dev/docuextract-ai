@@ -1,0 +1,27 @@
+{
+  "total_documents": 1,
+  "field_metrics": {
+    "vendor_name": {
+      "accuracy": 1.0,
+      "correct": 1,
+      "total": 1
+    },
+    "invoice_number": {
+      "accuracy": 1.0,
+      "correct": 1,
+      "total": 1
+    },
+    "invoice_date": {
+      "accuracy": 1.0,
+      "correct": 1,
+      "total": 1
+    },
+    "total_amount": {
+      "accuracy": 1.0,
+      "correct": 1,
+      "total": 1
+    }
+  },
+  "avg_line_item_f1": 1.0,
+  "arithmetic_accuracy": 1.0
+}
