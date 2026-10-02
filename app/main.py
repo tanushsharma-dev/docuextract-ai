@@ -12,7 +12,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS - frontend ko API se baat karne ke liye
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,10 +20,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# API Routes
 app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 app.include_router(review.router, prefix="/api/v1/review", tags=["Review"])
 app.include_router(evaluation.router, prefix="/api/v1/evaluation", tags=["Evaluation"])
+
+
+@app.on_event("startup")
+def on_startup():
+    """Deploy pe tables automatically create ho"""
+    from app.core.database import engine, Base
+    from app.models import Document, Page, ExtractionJob, ExtractedField, LineItem, HumanReview
+    Base.metadata.create_all(bind=engine)
 
 
 @app.get("/")
@@ -37,19 +43,10 @@ def health():
     return {"status": "healthy"}
 
 
-# ============================================================
-# Static File Serving
-# ============================================================
-
-# Processed document images ko browser me serve karna
-# (Isse frontend pe document preview dikhta hai: /storage/processed/{id}/page_1.png)
 os.makedirs("storage", exist_ok=True)
 os.makedirs("storage/samples", exist_ok=True)
 os.makedirs("storage/processed", exist_ok=True)
 os.makedirs("ui/web", exist_ok=True)
 
 app.mount("/storage", StaticFiles(directory="storage"), name="storage")
-
-# UI ko FastAPI se hi serve karo (Live Server ki zaroorat nahi - no reload trap!)
-# Access: http://127.0.0.1:8000/ui/
 app.mount("/ui", StaticFiles(directory="ui/web", html=True), name="ui")
