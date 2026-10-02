@@ -2,7 +2,6 @@ fastapi
 uvicorn[standard]
 python-multipart
 sqlalchemy
-psycopg2-binary
 pydantic-settings
 redis
 google-genai
@@ -10,5 +9,6 @@ opencv-python-headless
 PyMuPDF
 Pillow
 numpy
-streamlit
+psycopg2-binary
 requests
+streamlit
