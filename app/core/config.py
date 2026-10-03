@@ -1,27 +1,30 @@
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from functools import lru_cache
+from pydantic_settings import BaseSettings
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    # Database
+    DATABASE_URL: str = "sqlite:///docuextract.db"
 
-    DATABASE_URL: str = "sqlite:///./docuextract.db"
-    REDIS_URL: str = "redis://localhost:6379/0"
-
-    # Gemini (FREE VLM)
+    # AI Providers
     GEMINI_API_KEY: str = ""
-    VLM_MODEL: str = "gemini-2.0-flash"
+    GROQ_API_KEY: str = ""
+    VLM_PROVIDER: str = "gemini"
+    VLM_MODEL: str = "gemini-3.8-flash"
 
-    # Optional - ab zaroori nahi
-    OPENAI_API_KEY: str = ""
-
+    # Storage
     STORAGE_PATH: str = "./storage"
     MAX_FILE_SIZE_MB: int = 10
+
+    # Queue
+    REDIS_URL: str = "redis://localhost:6379/0"
+
+    # App
     LOG_LEVEL: str = "INFO"
     CONFIDENCE_AUTO_APPROVE: float = 0.85
     CONFIDENCE_REVIEW_THRESHOLD: float = 0.60
 
-@lru_cache()
-def get_settings():
-    return Settings()
+    class Config:
+        env_file = ".env"
 
-settings = get_settings()
+
+settings = Settings()

@@ -9,91 +9,60 @@ from app.extraction.confidence import calculate_field_confidence, requires_revie
 
 logger = logging.getLogger(__name__)
 
+
 def run_extraction_pipeline(file_path: str, output_dir: str, doc_type_hint: str = "auto") -> Dict:
-    result = {
-        "status": "success",
-        "document_type": None,
-        "fields": {},
-        "line_items": [],
-        "validation": {},
-        "requires_review": False
-    }
+    result = {"status": "success", "document_type": None, "fields": {}, "line_items": [], "validation": {}, "requires_review": False}
 
     try:
-        logger.info("Step 1: Preprocessing document")
+        logger.info("Step 1: Preprocessing")
         image_paths = preprocess_document(file_path, output_dir)
-        if not image_paths:
-            raise ValueError("No images generated from document")
 
-        primary_image = image_paths[0]
-
-        logger.info("Step 2: Running OCR")
-        ocr_result = run_ocr(primary_image)
-        ocr_text = ocr_result["full_text"]
+        logger.info("Step 2: OCR")
+        ocr_text = run_ocr(image_paths[0] if image_paths else file_path)["full_text"]
 
         logger.info("Step 3: Document type")
-        if doc_type_hint != "auto" and doc_type_hint in SUPPORTED_TYPES:
-            doc_type = doc_type_hint
-        else:
-            doc_type = classify_document_type(ocr_text)
+        doc_type = doc_type_hint if (doc_type_hint != "auto" and doc_type_hint in SUPPORTED_TYPES) else classify_document_type(ocr_text)
         result["document_type"] = doc_type
 
         logger.info("Step 4: VLM extraction")
-        vlm_output = extract_with_vlm(primary_image, doc_type)
+        vlm_output = extract_with_vlm(file_path, doc_type)
         if "error" in vlm_output:
-            logger.warning(f"VLM failed: {vlm_output['error']}")
-            vlm_output = {}
-
-        logger.info("Step 5: Rule-based extraction")
+            logger.error(f"VLM failed: {vlm_output['error']}")
+            result["status"] = "failed"
+            result["error"] = vlm_output["error"]
+            result["page_count"] = 1
+            return result
+        logger.info("Step 5: Rules")
         rule_output = rule_based_extraction(ocr_text, doc_type)
 
-        logger.info("Step 6: Merging with confidence")
-        merged_fields = {}
-        all_fields = set(list(vlm_output.keys()) + list(rule_output.keys()))
-
-        for field in all_fields:
+        logger.info("Step 6: Merge + confidence")
+        merged = {}
+        for field in set(list(vlm_output.keys()) + list(rule_output.keys())):
             if field in ("line_items", "items", "transactions"):
                 continue
-
             vlm_val = vlm_output.get(field)
             rule_val = rule_output.get(field)
-            final_value = vlm_val if vlm_val is not None else rule_val
-
-            confidence = calculate_field_confidence(
-                field_name=field,
-                ocr_value=None,
-                vlm_value=vlm_val,
-                rule_value=rule_val,
-                validation_passed=True
-            )
-
-            merged_fields[field] = {
-                "value": final_value,
-                "confidence": round(confidence, 3),
-                "requires_review": requires_review(confidence),
-                "source": "vlm" if vlm_val is not None else "rule"
+            conf = calculate_field_confidence(field_name=field, ocr_value=None, vlm_value=vlm_val, rule_value=rule_val, validation_passed=True)
+            merged[field] = {
+                "value": vlm_val if vlm_val is not None else rule_val,
+                "confidence": round(conf, 3),
+                "requires_review": requires_review(conf),
+                "source": "vlm" if vlm_val is not None else "rule",
             }
-
-            if requires_review(confidence):
+            if requires_review(conf):
                 result["requires_review"] = True
 
-        result["fields"] = merged_fields
-        result["line_items"] = (
-            vlm_output.get("line_items")
-            or vlm_output.get("items")
-            or vlm_output.get("transactions")
-            or []
-        )
+        result["fields"] = merged
+        result["line_items"] = vlm_output.get("line_items") or vlm_output.get("items") or vlm_output.get("transactions") or []
 
-        logger.info("Step 7: Final validation")
-        flat_data = {k: v["value"] for k, v in merged_fields.items()}
-        flat_data["line_items"] = result["line_items"]
-        result["validation"] = validate_extracted_data(flat_data, doc_type)
-
+        logger.info("Step 7: Validation")
+        flat = {k: v["value"] for k, v in merged.items()}
+        flat["line_items"] = result["line_items"]
+        result["validation"] = validate_extracted_data(flat, doc_type)
         if not result["validation"]["valid"]:
             result["requires_review"] = True
 
-        result["page_count"] = len(image_paths)
+        result["page_count"] = len(image_paths) if image_paths else 1
 
     except Exception as e:
         logger.error(f"Pipeline failed: {e}")

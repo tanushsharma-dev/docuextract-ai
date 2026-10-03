@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from uuid import UUID
 from pydantic import BaseModel
 from typing import Dict, Optional
+
 from app.core.database import get_db
 from app.models import Document, HumanReview, ExtractedField
 
@@ -10,9 +11,9 @@ router = APIRouter()
 
 
 class ReviewSubmission(BaseModel):
-    corrections: Dict[str, str]
+    corrections: Dict[str, str] = {}
     review_status: str = "approved"
-    reviewer_name: str = "anonymous"
+    reviewer_name: str = "Tanush Sharma"
     comments: Optional[str] = None
 
 

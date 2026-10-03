@@ -5,53 +5,80 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>DocuExtract AI — Multimodal Document Intelligence</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   * { font-family: 'Inter', sans-serif; }
   body {
     background:
-      radial-gradient(ellipse at 20% 0%, rgba(6,182,212,.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 100%, rgba(168,85,247,.12) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 0%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(168, 85, 247, 0.12) 0%, transparent 50%),
       linear-gradient(135deg, #020617 0%, #0a1628 50%, #050b1a 100%);
     background-attachment: fixed; min-height: 100vh;
   }
-  .glass { background: rgba(15,23,42,.6); backdrop-filter: blur(20px); border: 1px solid rgba(148,163,184,.1); }
-  .hero-title { font-size: clamp(2.5rem,6vw,4.5rem); line-height:.95; letter-spacing:-.04em; font-weight:700;
-    background: linear-gradient(135deg,#fff,#94a3b8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  .gradient-text { background: linear-gradient(135deg,#06b6d4,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
-  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
-  @keyframes spin-slow { to{transform:rotate(360deg)} }
-  .float{animation:float 4s ease-in-out infinite} .spin-slow{animation:spin-slow 3s linear infinite}
-  .confidence-high{background:rgba(16,185,129,.1);color:#34d399;border-color:rgba(16,185,129,.3)}
-  .confidence-mid{background:rgba(245,158,11,.1);color:#fbbf24;border-color:rgba(245,158,11,.3)}
-  .confidence-low{background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.3)}
-  .doc-tab{transition:all .3s} .doc-tab-active{background:linear-gradient(135deg,#06b6d4,#10b981);color:#fff;box-shadow:0 5px 25px rgba(6,182,212,.4)}
-  .viz-tab{border-bottom:2px solid transparent} .viz-tab-active{border-color:#06b6d4;color:#fff}
-  .dropzone-active{border-color:#06b6d4 !important;background:rgba(6,182,212,.05) !important}
-  .field-card{transition:all .3s} .field-card:hover{transform:translateY(-2px)}
+  .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(20px); border: 1px solid rgba(148, 163, 184, 0.1); }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+  @keyframes pulse-glow { 0%,100% { opacity: .6; } 50% { opacity: 1; } }
+  @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes spin-slow { to { transform: rotate(360deg); } }
+  .float { animation: float 4s ease-in-out infinite; }
+  .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  .slide-up { animation: slide-up .6s ease-out forwards; }
+  .spin-slow { animation: spin-slow 3s linear infinite; }
+  .hero-title {
+    font-size: clamp(2.5rem, 6vw, 4.5rem); line-height: .95; letter-spacing: -0.04em; font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, #94a3b8 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .gradient-text { background: linear-gradient(135deg, #06b6d4, #a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: #0f172a; }
+  ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+  .confidence-high { background: rgba(16,185,129,.1); color: #34d399; border-color: rgba(16,185,129,.3); }
+  .confidence-mid { background: rgba(245,158,11,.1); color: #fbbf24; border-color: rgba(245,158,11,.3); }
+  .confidence-low { background: rgba(239,68,68,.1); color: #f87171; border-color: rgba(239,68,68,.3); }
+  .dropzone-active { border-color: #06b6d4 !important; background: rgba(6,182,212,.05) !important; }
+  .field-card { transition: all .3s; }
+  .field-card:hover { transform: translateY(-2px); border-color: rgba(148,163,184,.3); }
+  .doc-tab { transition: all .3s; }
+  .doc-tab-active { background: linear-gradient(135deg, #06b6d4, #10b981); color: #fff; box-shadow: 0 5px 25px rgba(6,182,212,.4); }
+  .viz-tab { border-bottom: 2px solid transparent; }
+  .viz-tab-active { border-color: #06b6d4; color: #fff; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(80px); opacity: .3; pointer-events: none; }
+  .social-btn { transition: all .3s; }
+  .social-btn:hover { transform: translateY(-2px); border-color: rgba(6,182,212,.5); background: rgba(6,182,212,.08); }
 </style>
 </head>
 <body class="text-slate-100">
+
+<div class="orb bg-cyan-500 w-96 h-96 top-20 -left-20 fixed"></div>
+<div class="orb bg-purple-500 w-96 h-96 bottom-20 -right-20 fixed"></div>
 
 <nav class="sticky top-0 z-50 glass border-b border-slate-800/50">
   <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
     <div class="flex items-center gap-3">
       <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center font-bold text-lg">D</div>
       <div>
-        <h1 class="font-semibold">DocuExtract <span class="gradient-text">AI</span></h1>
+        <h1 class="font-semibold text-base leading-tight">DocuExtract <span class="gradient-text">AI</span></h1>
         <p class="text-[10px] text-slate-400 uppercase tracking-widest">Document Intelligence</p>
       </div>
     </div>
-    <span id="apiBadge" class="text-xs px-3 py-1.5 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20">● API checking…</span>
+    <div class="flex items-center gap-3">
+      <a href="/ui/dashboard" class="text-xs px-4 py-2 rounded-full glass text-slate-300 hover:text-white transition">📋 My Documents</a>
+      <span class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-glow"></span> Groq · Gemini · Neon
+      </span>
+    </div>
   </div>
 </nav>
 
-<section class="max-w-7xl mx-auto px-6 pt-14 pb-8 text-center">
-  <h1 class="hero-title mb-4">Understand: <span class="gradient-text">Try Our AI Extraction</span></h1>
-  <p class="text-lg text-slate-400">Click any document type — watch AI extract every field with confidence</p>
+<section class="max-w-7xl mx-auto px-6 pt-16 pb-10 text-center">
+  <h1 class="hero-title mb-5 slide-up">Understand: <span class="gradient-text">Try Our AI Extraction</span></h1>
+  <p class="text-lg text-slate-400 max-w-2xl mx-auto slide-up" style="animation-delay:.15s">
+    Click any document type — watch the AI read it, extract every field, and score its confidence.
+  </p>
 </section>
 
-<div class="max-w-5xl mx-auto px-6 mb-8">
+<div class="max-w-5xl mx-auto px-6 mb-10">
   <div class="glass rounded-full p-2 flex flex-wrap justify-center gap-1">
     <button type="button" data-type="receipt" class="doc-tab doc-tab-active px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Receipt</button>
     <button type="button" data-type="invoice" class="doc-tab px-5 py-2.5 rounded-full text-sm font-medium text-slate-300">Invoice</button>
@@ -69,24 +96,28 @@
         <div class="text-3xl">⬆️</div>
         <div class="text-left">
           <p class="font-medium">Drag or upload your own document here</p>
-          <p class="text-xs text-slate-400 mt-1">[JPEG, PNG or PDF] — ya upar sample tab click karo</p>
+          <p class="text-xs text-slate-400 mt-1">[JPEG, PNG or PDF] — or click a sample tab above</p>
         </div>
       </div>
       <input type="file" id="fileInput" hidden accept=".pdf,.png,.jpg,.jpeg,.webp,.tiff" />
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
       <div>
         <div id="noDoc" class="h-full min-h-[300px] flex items-center justify-center text-slate-500 text-sm border border-slate-800 rounded-2xl">
           📄 Select a tab above to load a sample document
         </div>
         <div id="preview" class="hidden">
-          <div class="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-t-xl px-4 py-2 text-sm text-slate-300">
-            <span>🔍</span><span class="px-3 py-0.5 bg-slate-800 rounded">1</span><span class="text-slate-500">of 1</span>
+          <div class="flex items-center gap-3 bg-slate-900 border border-slate-700 rounded-t-xl px-4 py-2 text-slate-300 text-sm">
+            <span>🔍</span>
+            <span class="px-3 py-0.5 bg-slate-800 rounded">1</span>
+            <span class="text-slate-500">of 1</span>
             <span class="ml-auto text-xs text-slate-500" id="fileName"></span>
           </div>
-          <div class="bg-white rounded-b-xl overflow-hidden border border-t-0 border-slate-700 max-h-[600px] overflow-y-auto">
+          <div class="bg-white rounded-b-xl overflow-hidden border border-t-0 border-slate-700">
             <img id="docImage" class="w-full" alt="Document" />
+            <iframe id="docFrame" class="hidden w-full bg-white" style="height:600px;border:none;" title="Document"></iframe>
           </div>
         </div>
       </div>
@@ -100,13 +131,13 @@
         <div id="emptyState" class="border border-slate-800 rounded-2xl p-10 text-center">
           <div class="text-5xl mb-4 float">🤖</div>
           <p class="font-medium mb-2">Awaiting document</p>
-          <p class="text-sm text-slate-400">Tab click karo ya apna document upload karo</p>
+          <p class="text-sm text-slate-400">Click a sample tab above or upload your own document</p>
         </div>
 
-        <div id="loadingState" class="hidden border border-slate-800 rounded-2xl p-10 text-center">
+        <div id="loading" class="hidden border border-slate-800 rounded-2xl p-10 text-center">
           <div class="spin-slow text-5xl mb-4 inline-block">⚙️</div>
-          <p class="font-medium mb-2">Gemini is analyzing…</p>
-          <p class="text-sm text-slate-400">30-60 seconds — page band MAT karo</p>
+          <p class="font-medium mb-2">AI is analyzing…</p>
+          <p class="text-sm text-slate-400">30-60 seconds — please keep this page open</p>
         </div>
 
         <div id="errorState" class="hidden border border-rose-500/30 rounded-2xl p-8 text-center bg-rose-500/5">
@@ -115,26 +146,35 @@
           <p id="errorMsg" class="text-sm text-slate-400 font-mono break-words"></p>
         </div>
 
-        <div id="resultsState" class="hidden space-y-5">
-          <div class="flex items-center justify-between">
-            <span id="statusChip" class="text-xs px-3 py-1.5 rounded-full border font-medium"></span>
-            <span id="typeChip" class="text-xs px-3 py-1.5 rounded-full glass text-slate-300"></span>
-          </div>
-          <div class="bg-white text-slate-900 rounded-2xl p-6 text-center shadow-xl">
-            <div class="text-4xl mb-3" id="heroIcon">🏢</div>
-            <div class="text-2xl font-semibold" id="heroName">—</div>
-            <div class="text-xs uppercase tracking-widest text-slate-500 mt-1" id="heroLabel"></div>
-          </div>
-          <div id="fieldsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
-          <div id="itemsBox" class="hidden">
-            <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">≡ Line Items</p>
-            <div class="rounded-xl border border-slate-800 overflow-x-auto">
-              <table class="w-full text-sm">
-                <thead id="itemsHead" class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider"></thead>
-                <tbody id="itemsBody" class="divide-y divide-slate-800"></tbody>
-              </table>
+        <div id="results" class="hidden">
+          <div id="vizPanel" class="space-y-5">
+            <div class="flex items-center justify-between gap-2">
+              <span id="statusChip" class="text-xs px-3 py-1.5 rounded-full border font-medium"></span>
+              <div class="flex items-center gap-2">
+                <span id="typeChip" class="text-xs px-3 py-1.5 rounded-full glass text-slate-300"></span>
+                <button type="button" onclick="exportCSV()" class="text-xs px-3 py-1.5 rounded-full glass text-emerald-400 hover:text-white transition">📤 CSV</button>
+              </div>
+            </div>
+
+            <div id="heroCard" class="bg-white text-slate-900 rounded-2xl p-6 text-center shadow-xl">
+              <div class="text-4xl mb-3" id="heroIcon">🏢</div>
+              <div class="text-2xl font-semibold" id="heroName">—</div>
+              <div class="text-xs uppercase tracking-widest text-slate-500 mt-1" id="heroLabel"></div>
+            </div>
+
+            <div id="fieldsGrid" class="grid grid-cols-1 sm:grid-cols-2 gap-3"></div>
+
+            <div id="itemsBox" class="hidden">
+              <p class="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-3">≡ Line Items</p>
+              <div class="rounded-xl border border-slate-800 overflow-x-auto">
+                <table class="w-full text-sm">
+                  <thead id="itemsHead" class="bg-slate-900/50 text-slate-400 text-xs uppercase tracking-wider"></thead>
+                  <tbody id="itemsBody" class="divide-y divide-slate-800"></tbody>
+                </table>
+              </div>
             </div>
           </div>
+
           <pre id="jsonView" class="hidden text-xs bg-slate-950 border border-slate-800 rounded-xl p-4 overflow-auto max-h-[500px] font-mono text-emerald-300"></pre>
         </div>
       </div>
@@ -142,189 +182,260 @@
   </div>
 </section>
 
-<footer class="border-t border-slate-800/50">
-  <div class="max-w-7xl mx-auto px-6 py-6 text-sm text-slate-400 flex justify-between">
-    <span>DocuExtract AI · FastAPI + Gemini + Neon</span>
-    <a href="/docs" target="_blank" class="hover:text-white">API Docs →</a>
+<footer class="border-t border-slate-800/50 mt-10">
+  <div class="max-w-7xl mx-auto px-6 py-10">
+
+    <div class="glass rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="flex items-center gap-4">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500 to-purple-600 flex items-center justify-center text-xl font-bold text-white shadow-lg">TS</div>
+        <div>
+          <p class="text-white font-semibold text-lg leading-tight">Tanush Sharma</p>
+          <p class="text-[11px] text-cyan-400 uppercase tracking-widest mt-0.5">AI / Full-Stack Developer</p>
+          <p class="text-xs text-slate-500 mt-1.5">DocuExtract AI · FastAPI + Groq/Gemini + Neon PostgreSQL</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <a href="https://github.com/tanushsharma-dev" target="_blank"
+           class="social-btn flex items-center gap-2 px-4 py-2.5 rounded-xl glass text-sm text-slate-300">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+        <a href="https://www.linkedin.com/in/tanush-sharma-8b1807280/" target="_blank"
+           class="social-btn flex items-center gap-2 px-4 py-2.5 rounded-xl glass text-sm text-slate-300">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M20.45 20.45h-3.55v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.36V9h3.41v1.56h.05c.47-.9 1.63-1.85 3.36-1.85 3.6 0 4.27 2.37 4.27 5.45v6.29zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z"/></svg>
+          LinkedIn
+        </a>
+        <a href="mailto:tanushsharma052@gmail.com"
+           class="social-btn flex items-center gap-2 px-4 py-2.5 rounded-xl glass text-sm text-slate-300">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></svg>
+          Email
+        </a>
+      </div>
+    </div>
+
+    <div class="flex flex-col md:flex-row items-center justify-between gap-2 mt-6 text-xs text-slate-500">
+      <span>© 2026 Tanush Sharma · Built with FastAPI, Groq/Gemini & Neon PostgreSQL</span>
+      <a href="/docs" target="_blank" class="hover:text-white transition">API Docs →</a>
+    </div>
+
   </div>
 </footer>
 
 <script>
-var API = "/api/v1";
-var $ = function(id){ return document.getElementById(id); };
+const API = "/api/v1";
+const ROOT = "";
+const $ = id => document.getElementById(id);
+const cache = {};
+let activeType = null;
+let lastData = null;
 
-var HERO = {
-  invoice: { field: "vendor_name", label: "Vendor", icon: "🏢" },
-  receipt: { field: "merchant_name", label: "Merchant", icon: "🛒" },
-  bank_statement: { field: "bank_name", label: "Bank", icon: "🏦" },
-  id_card: { field: "full_name", label: "Card Holder", icon: "🪪" },
-  form: { field: "form_title", label: "Form", icon: "📋" }
+const HERO = {
+  invoice:        { field: "vendor_name",  label: "Vendor",      icon: "🏢" },
+  receipt:        { field: "merchant_name",label: "Merchant",    icon: "🛒" },
+  bank_statement: { field: "bank_name",    label: "Bank",        icon: "🏦" },
+  id_card:        { field: "full_name",    label: "Card Holder", icon: "🪪" },
+  form:           { field: "form_title",   label: "Form",        icon: "📋" }
 };
 
-// API health badge
-fetch("/health").then(function(r){
-  if (r.ok) {
-    $("apiBadge").textContent = "● Gemini · Neon · Live";
-    $("apiBadge").className = "text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
-  }
-}).catch(function(){ $("apiBadge").textContent = "● API OFFLINE — uvicorn chalao"; });
+const dropzone = $("dropzone"), fileInput = $("fileInput");
 
-function show(name){
-  $("emptyState").className = (name==="empty") ? "border border-slate-800 rounded-2xl p-10 text-center" : "hidden";
-  $("loadingState").className = (name==="loading") ? "border border-slate-800 rounded-2xl p-10 text-center" : "hidden";
-  $("errorState").className = (name==="error") ? "border border-rose-500/30 rounded-2xl p-8 text-center bg-rose-500/5" : "hidden";
-  $("resultsState").className = (name==="results") ? "space-y-5" : "hidden";
+dropzone.onclick = () => fileInput.click();
+fileInput.onchange = () => fileInput.files[0] && uploadCustom(fileInput.files[0]);
+dropzone.ondragover = e => { e.preventDefault(); dropzone.classList.add("dropzone-active"); };
+dropzone.ondragleave = () => dropzone.classList.remove("dropzone-active");
+dropzone.ondrop = e => {
+  e.preventDefault();
+  dropzone.classList.remove("dropzone-active");
+  if (e.dataTransfer.files[0]) uploadCustom(e.dataTransfer.files[0]);
+};
+
+document.querySelectorAll(".doc-tab").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+    document.querySelectorAll(".doc-tab").forEach(b => b.classList.remove("doc-tab-active"));
+    btn.classList.add("doc-tab-active");
+    runSample(btn.dataset.type);
+  });
+});
+
+$("vizTab").onclick = () => switchViz(true);
+$("jsonTab").onclick = () => switchViz(false);
+function switchViz(viz) {
+  $("vizTab").classList.toggle("viz-tab-active", viz);
+  $("jsonTab").classList.toggle("viz-tab-active", !viz);
+  $("vizPanel").classList.toggle("hidden", !viz);
+  $("jsonView").classList.toggle("hidden", viz);
 }
 
-function fail(msg){
-  console.error("DocuExtract:", msg);
+function show(name) {
+  $("emptyState").classList.toggle("hidden", name !== "empty");
+  $("loading").classList.toggle("hidden", name !== "loading");
+  $("errorState").classList.toggle("hidden", name !== "error");
+  $("results").classList.toggle("hidden", name !== "results");
+}
+
+function fail(msg) {
+  console.error("DocuExtract error:", msg);
   $("errorMsg").textContent = msg;
   show("error");
 }
 
-// Tabs
-var tabs = document.querySelectorAll(".doc-tab");
-for (var t = 0; t < tabs.length; t++) {
-  tabs[t].addEventListener("click", function(){
-    for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove("doc-tab-active");
-    this.classList.add("doc-tab-active");
-    runSample(this.getAttribute("data-type"));
-  });
-}
-
-$("vizTab").onclick = function(){ switchViz(true); };
-$("jsonTab").onclick = function(){ switchViz(false); };
-function switchViz(viz){
-  $("vizTab").classList.toggle("viz-tab-active", viz);
-  $("jsonTab").classList.toggle("viz-tab-active", !viz);
-  $("jsonView").classList.toggle("hidden", viz);
-  $("fieldsGrid").classList.toggle("hidden", !viz);
-  if (!viz) $("itemsBox").classList.add("hidden");
-}
-
-// Upload own file
-var dropzone = $("dropzone"), fileInput = $("fileInput");
-dropzone.onclick = function(){ fileInput.click(); };
-fileInput.onchange = function(){ if (fileInput.files[0]) uploadCustom(fileInput.files[0]); };
-dropzone.ondragover = function(e){ e.preventDefault(); dropzone.classList.add("dropzone-active"); };
-dropzone.ondragleave = function(){ dropzone.classList.remove("dropzone-active"); };
-dropzone.ondrop = function(e){
-  e.preventDefault(); dropzone.classList.remove("dropzone-active");
-  if (e.dataTransfer.files[0]) uploadCustom(e.dataTransfer.files[0]);
-};
-
-function uploadCustom(file){
+async function uploadCustom(file) {
+  activeType = null;
   show("loading");
   $("noDoc").classList.add("hidden");
   $("preview").classList.remove("hidden");
-  window.lastUploadURL = URL.createObjectURL(file);
-  $("docImage").src = window.lastUploadURL;
+
+  const isPdf = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+  $("docFrame").classList.toggle("hidden", !isPdf);
+  $("docImage").classList.toggle("hidden", isPdf);
+  if (isPdf) {
+    $("docFrame").src = URL.createObjectURL(file);
+  } else {
+    $("docImage").src = URL.createObjectURL(file);
+  }
   $("fileName").textContent = file.name;
-  var fd = new FormData();
+
+  const fd = new FormData();
   fd.append("file", file);
   fd.append("document_type", "auto");
-  send(fd);
+  await send(fd);
 }
 
-function runSample(type){
-  show("loading");
-  var url = "/storage/samples/sample_" + type + ".png";
+async function runSample(type) {
+  activeType = type;
+  const url = ROOT + "/storage/samples/sample_" + type + ".png";
   $("noDoc").classList.add("hidden");
   $("preview").classList.remove("hidden");
+
+  $("docFrame").classList.add("hidden");
+  $("docImage").classList.remove("hidden");
   $("docImage").src = url;
   $("fileName").textContent = "sample_" + type + ".png";
 
-  fetch(url).then(function(r){
-    if (!r.ok) { fail("Sample not found (404) → chalao: python scripts/generate_samples.py"); return; }
-    return r.blob();
-  }).then(function(blob){
-    if (!blob) return;
-    var fd = new FormData();
+  if (cache[type]) {
+    renderResults(cache[type]);
+    return;
+  }
+
+  show("loading");
+  try {
+    const imgRes = await fetch(url);
+    if (!imgRes.ok) {
+      fail("Sample image not found (404). Run: python scripts/generate_samples.py — then restart the API server.");
+      return;
+    }
+    const blob = await imgRes.blob();
+    const fd = new FormData();
     fd.append("file", new File([blob], "sample_" + type + ".png", { type: "image/png" }));
     fd.append("document_type", type);
-    send(fd);
-  }).catch(function(e){ fail("Network error: " + e.message); });
+    await send(fd);
+  } catch (e) {
+    fail("Network error: " + e.message + " — is the API server running?");
+  }
 }
 
-function send(fd){
-  fetch(API + "/documents/", { method: "POST", body: fd }).then(function(res){
-    return res.json().then(function(data){ return { ok: res.ok, status: res.status, data: data }; });
-  }).then(function(out){
-    if (!out.ok) { fail("API error " + out.status + ": " + JSON.stringify(out.data)); return; }
-    loadResults(out.data.document_id);
-  }).catch(function(e){
-    fail("API not reachable: " + e.message + " → uvicorn restart karo");
+async function send(fd) {
+  try {
+    const res = await fetch(API + "/documents/", { method: "POST", body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      fail("API error " + res.status + ": " + (data.detail || res.statusText));
+      return;
+    }
+    await loadResults(data.document_id);
+  } catch (e) {
+    fail("API not reachable: " + e.message + " — restart the API server (port 8000).");
+  }
+}
+
+async function loadResults(id) {
+  const res = await fetch(API + "/documents/" + id + "/extraction");
+  if (!res.ok) { fail("Extraction fetch failed: " + res.status); return; }
+  const data = await res.json();
+
+  if (data.status === "failed" && data.error) {
+    fail("AI error: " + data.error);
+    return;
+  }
+
+  if (activeType) cache[activeType] = data;
+  renderResults(data);
+}
+
+function renderResults(data) {
+  lastData = data;
+  const chip = $("statusChip");
+  const map = {
+    extracted: ["✓ Auto-Approved", "confidence-high"],
+    needs_review: ["⚠ Needs Review", "confidence-mid"],
+    reviewed: ["✓ Approved", "confidence-high"],
+    failed: ["✕ Failed", "confidence-low"]
+  };
+  const s = map[data.status] || map.extracted;
+  chip.textContent = s[0];
+  chip.className = "text-xs px-3 py-1.5 rounded-full border font-medium " + s[1];
+  $("typeChip").textContent = "📑 " + (data.document_type || "unknown").replace(/_/g, " ");
+
+  const type = data.document_type || "invoice";
+  const heroConf = HERO[type] || HERO.invoice;
+  const heroField = (data.fields || {})[heroConf.field];
+  $("heroIcon").textContent = heroConf.icon;
+  $("heroName").textContent = heroField ? heroField.value : "—";
+  $("heroLabel").textContent = heroConf.label;
+
+  const grid = $("fieldsGrid");
+  grid.innerHTML = "";
+  Object.entries(data.fields || {}).forEach(([name, f], i) => {
+    if (name === heroConf.field) return;
+    const conf = f.confidence ?? 0;
+    const cls = conf >= 0.85 ? "confidence-high" : conf >= 0.6 ? "confidence-mid" : "confidence-low";
+    const div = document.createElement("div");
+    div.className = "field-card glass rounded-xl p-4 slide-up";
+    div.style.animationDelay = (i * 0.05) + "s";
+    div.innerHTML = `
+      <div class="flex justify-between items-center mb-1.5 gap-2">
+        <span class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">${name.replace(/_/g, " ")}</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full border ${cls} font-medium">${Math.round(conf * 100)}%</span>
+      </div>
+      <div class="font-medium text-sm break-words">${f.value ?? "—"}</div>`;
+    grid.appendChild(div);
   });
+
+  const items = data.line_items || [];
+  if (items.length) {
+    $("itemsBox").classList.remove("hidden");
+    const keys = Object.keys(items[0]);
+    $("itemsHead").innerHTML = "<tr>" + keys.map(k =>
+      `<th class="text-left px-4 py-2.5">${k.replace(/_/g, " ")}</th>`).join("") + "</tr>";
+    $("itemsBody").innerHTML = items.map(row =>
+      "<tr class='hover:bg-slate-900/50'>" + keys.map(k =>
+        `<td class="px-4 py-2.5">${row[k] ?? "—"}</td>`).join("") + "</tr>").join("");
+  } else {
+    $("itemsBox").classList.add("hidden");
+  }
+
+  $("jsonView").textContent = JSON.stringify(data, null, 2);
+  switchViz(true);
+  show("results");
 }
 
-function loadResults(id){
-  fetch(API + "/documents/" + id + "/extraction").then(function(r){ return r.json(); }).then(function(data){
-
-    // PDF/Image preview: pipeline ka render kiya hua page_1.png dikhao
-    var img = $("docImage");
-    img.onerror = function(){ img.onerror = null; if (window.lastUploadURL) img.src = window.lastUploadURL; };
-    img.src = "/storage/processed/" + id + "/page_1.png";
-
-    var map = {
-      extracted: ["✓ Auto-Approved", "confidence-high"],
-      needs_review: ["⚠ Needs Review", "confidence-mid"],
-      reviewed: ["✓ Approved", "confidence-high"],
-      failed: ["✕ Failed", "confidence-low"]
-    };
-    var s = map[data.status] || map.extracted;
-    $("statusChip").textContent = s[0];
-    $("statusChip").className = "text-xs px-3 py-1.5 rounded-full border font-medium " + s[1];
-    $("typeChip").textContent = "📑 " + (data.document_type || "unknown").replace(/_/g, " ");
-
-    var type = data.document_type || "invoice";
-    var hc = HERO[type] || HERO.invoice;
-    var hf = (data.fields || {})[hc.field];
-    $("heroIcon").textContent = hc.icon;
-    $("heroName").textContent = hf ? hf.value : "—";
-    $("heroLabel").textContent = hc.label;
-
-    var grid = $("fieldsGrid");
-    grid.innerHTML = "";
-    var fields = data.fields || {};
-    for (var name in fields) {
-      if (name === hc.field) continue;
-      var f = fields[name];
-      var conf = f.confidence || 0;
-      var cls = conf >= 0.85 ? "confidence-high" : conf >= 0.6 ? "confidence-mid" : "confidence-low";
-      var div = document.createElement("div");
-      div.className = "field-card glass rounded-xl p-4";
-      div.innerHTML =
-        '<div class="flex justify-between items-center mb-1.5 gap-2">' +
-        '<span class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">' + name.replace(/_/g, " ") + '</span>' +
-        '<span class="text-[10px] px-2 py-0.5 rounded-full border ' + cls + ' font-medium">' + Math.round(conf * 100) + '%</span>' +
-        '</div><div class="font-medium text-sm break-words">' + (f.value != null ? f.value : "—") + '</div>';
-      grid.appendChild(div);
-    }
-
-    var items = data.line_items || [];
-    if (items.length) {
-      $("itemsBox").classList.remove("hidden");
-      var keys = Object.keys(items[0]);
-      var head = "<tr>";
-      for (var a = 0; a < keys.length; a++) head += '<th class="text-left px-4 py-2.5">' + keys[a].replace(/_/g, " ") + '</th>';
-      head += "</tr>";
-      var body = "";
-      for (var b = 0; b < items.length; b++) {
-        body += "<tr>";
-        for (var c = 0; c < keys.length; c++) body += '<td class="px-4 py-2.5">' + (items[b][keys[c]] != null ? items[b][keys[c]] : "—") + '</td>';
-        body += "</tr>";
-      }
-      $("itemsHead").innerHTML = head;
-      $("itemsBody").innerHTML = body;
-    } else {
-      $("itemsBox").classList.add("hidden");
-    }
-
-    $("jsonView").textContent = JSON.stringify(data, null, 2);
-    switchViz(true);
-    show("results");
-  }).catch(function(e){ fail("Extraction load fail: " + e.message); });
+function exportCSV() {
+  if (!lastData) return;
+  const rows = [["Field", "Value", "Confidence", "Source"]];
+  Object.entries(lastData.fields || {}).forEach(([k, f]) =>
+    rows.push([k, f.value ?? "", f.confidence ?? "", f.source ?? ""]));
+  (lastData.line_items || []).forEach((it, i) =>
+    rows.push(["line_item_" + (i + 1), JSON.stringify(it), "", ""]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "docuextract_" + (lastData.document_id || "data").slice(0, 8) + ".csv";
+  a.click();
 }
+
+window.addEventListener("load", () => runSample("receipt"));
 </script>
 </body>
 </html>

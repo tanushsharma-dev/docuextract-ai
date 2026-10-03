@@ -1,44 +1,51 @@
-from typing import Dict, Any
+import logging
 
-def calculate_field_confidence(
-    field_name: str,
-    ocr_value: Any,
-    vlm_value: Any,
-    rule_value: Any,
-    validation_passed: bool
-) -> float:
-    """Calculate confidence score for a field."""
-    score = 0.0
-    signals = 0
+from app.core.config import settings
 
-    # VLM signal (weight: 0.40)
-    if vlm_value is not None:
-        score += 0.40
-        signals += 1
+logger = logging.getLogger(__name__)
 
-    # OCR/Rule signal (weight: 0.35)
-    if rule_value is not None or ocr_value is not None:
-        score += 0.35
-        signals += 1
+# Safe read — config me na ho to default use hoga (crash nahi hoga)
+AUTO_APPROVE = getattr(settings, "CONFIDENCE_AUTO_APPROVE", 0.85)
+REVIEW_THRESHOLD = getattr(settings, "CONFIDENCE_REVIEW_THRESHOLD", 0.60)
 
-    # Agreement signal (weight: 0.15)
-    values = [v for v in [vlm_value, rule_value, ocr_value] if v is not None]
-    if len(values) >= 2:
-        # Normalize and compare
-        str_values = [str(v).strip().lower() for v in values]
-        if len(set(str_values)) == 1:
-            score += 0.15
-            signals += 1
 
-    # Validation signal (weight: 0.10)
-    if validation_passed:
-        score += 0.10
-        signals += 1
+def calculate_field_confidence(field_name=None, ocr_value=None, vlm_value=None,
+                               rule_value=None, validation_passed=True, **kwargs):
+    """
+    Confidence scoring:
+    - VLM + Rule match -> 0.98
+    - VLM only         -> 0.92  (Auto-Approved)
+    - Rule only        -> 0.60  (Needs Review)
+    - Nothing          -> 0.10  (Missing)
+    """
+    vlm_empty = vlm_value is None or str(vlm_value).strip() in ("", "None", "null")
+    rule_empty = rule_value is None or str(rule_value).strip() in ("", "None", "null")
 
-    return min(score, 1.0)
+    if not vlm_empty and not rule_empty:
+        if str(vlm_value).strip().lower() == str(rule_value).strip().lower():
+            confidence = 0.98
+        else:
+            confidence = 0.85
+    elif not vlm_empty:
+        confidence = 0.92
+    elif not rule_empty:
+        confidence = 0.60
+    else:
+        confidence = 0.10
 
-def requires_review(confidence: float, threshold: float = 0.60) -> bool:
-    return confidence < threshold
+    if validation_passed and confidence > 0.5:
+        confidence = min(1.0, confidence + 0.02)
 
-def auto_approve(confidence: float, threshold: float = 0.85) -> bool:
-    return confidence >= threshold
+    return round(confidence, 3)
+
+
+def requires_review(confidence):
+    return confidence < AUTO_APPROVE
+
+
+def document_status(fields):
+    if not fields:
+        return "needs_review"
+    confs = [f.get("confidence", 0) for f in fields.values()]
+    avg = sum(confs) / len(confs)
+    return "extracted" if avg >= AUTO_APPROVE else "needs_review"

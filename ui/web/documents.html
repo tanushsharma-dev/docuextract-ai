@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>My Documents — DocuExtract AI</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Inter', sans-serif; }
+  body {
+    background:
+      radial-gradient(ellipse at 20% 0%, rgba(6,182,212,.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(168,85,247,.12) 0%, transparent 50%),
+      linear-gradient(135deg, #020617 0%, #0a1628 50%, #050b1a 100%);
+    background-attachment: fixed; min-height: 100vh;
+  }
+  .glass { background: rgba(15,23,42,.6); backdrop-filter: blur(20px); border: 1px solid rgba(148,163,184,.1); }
+  .gradient-text { background: linear-gradient(135deg,#06b6d4,#a855f7); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  @keyframes pulse-glow { 0%,100%{opacity:.6} 50%{opacity:1} }
+  .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  @keyframes slide-up { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+  .slide-up { animation: slide-up .5s ease-out forwards; }
+  .st-high { background: rgba(16,185,129,.1); color:#34d399; border-color: rgba(16,185,129,.3); }
+  .st-mid { background: rgba(245,158,11,.1); color:#fbbf24; border-color: rgba(245,158,11,.3); }
+  .st-low { background: rgba(239,68,68,.1); color:#f87171; border-color: rgba(239,68,68,.3); }
+  .st-info { background: rgba(56,189,240,.1); color:#38bdf8; border-color: rgba(56,189,240,.3); }
+  .row-hover:hover { background: rgba(30,41,59,.5); }
+  .action-btn { transition: all .2s; }
+  .action-btn:hover { transform: translateY(-1px); }
+  .orb { position:absolute; border-radius:50%; filter:blur(80px); opacity:.3; pointer-events:none; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background:#0f172a; }
+  ::-webkit-scrollbar-thumb { background:#1e293b; border-radius:4px; }
+</style>
+</head>
+<body class="text-slate-100">
+
+<div class="orb bg-cyan-500 w-96 h-96 top-20 -left-20 fixed"></div>
+<div class="orb bg-purple-500 w-96 h-96 bottom-20 -right-20 fixed"></div>
+
+<nav class="sticky top-0 z-40 glass border-b border-slate-800/50">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center font-bold text-lg">D</div>
+      <div>
+        <h1 class="font-semibold text-base leading-tight">DocuExtract <span class="gradient-text">AI</span></h1>
+        <p class="text-[10px] text-slate-400 uppercase tracking-widest">Document Intelligence</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="/ui/" class="text-xs px-4 py-2 rounded-full glass text-slate-300 hover:text-white transition">🤖 Extractor</a>
+      <span class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-glow"></span> Groq · Gemini · Neon
+      </span>
+    </div>
+  </div>
+</nav>
+
+<section class="max-w-7xl mx-auto px-6 pt-10 pb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+  <div>
+    <h1 class="text-3xl font-bold">My <span class="gradient-text">Documents</span></h1>
+    <p class="text-sm text-slate-400 mt-1">Track, review and export every processed document</p>
+  </div>
+  <button onclick="loadDocs()" class="action-btn px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-sm font-semibold shadow-lg">🔄 Refresh</button>
+</section>
+
+<section class="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+  <div class="glass rounded-2xl p-5 slide-up"><p class="text-xs uppercase tracking-widest text-slate-400">Total</p><p id="statTotal" class="text-3xl font-bold mt-1">0</p></div>
+  <div class="glass rounded-2xl p-5 slide-up"><p class="text-xs uppercase tracking-widest text-emerald-400">Approved</p><p id="statOk" class="text-3xl font-bold mt-1 text-emerald-400">0</p></div>
+  <div class="glass rounded-2xl p-5 slide-up"><p class="text-xs uppercase tracking-widest text-amber-400">Needs Review</p><p id="statRev" class="text-3xl font-bold mt-1 text-amber-400">0</p></div>
+  <div class="glass rounded-2xl p-5 slide-up"><p class="text-xs uppercase tracking-widest text-rose-400">Failed</p><p id="statFail" class="text-3xl font-bold mt-1 text-rose-400">0</p></div>
+</section>
+
+<section class="max-w-7xl mx-auto px-6 pb-16">
+  <div class="glass rounded-2xl overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-900/60 text-slate-400 text-xs uppercase tracking-wider">
+          <tr>
+            <th class="text-left px-5 py-3.5">Document</th>
+            <th class="text-left px-5 py-3.5">Type</th>
+            <th class="text-left px-5 py-3.5">Status</th>
+            <th class="text-left px-5 py-3.5">Processed At</th>
+            <th class="text-right px-5 py-3.5">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="docRows" class="divide-y divide-slate-800"></tbody>
+      </table>
+    </div>
+    <div id="emptyMsg" class="hidden p-12 text-center text-slate-500 text-sm">📭 No documents yet — <a href="/ui/" class="text-cyan-400 hover:underline">upload your first document</a></div>
+  </div>
+</section>
+
+<div id="modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="glass rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+      <div>
+        <h2 id="modalTitle" class="font-semibold">Document</h2>
+        <span id="modalChip" class="text-[10px] px-2 py-0.5 rounded-full border"></span>
+      </div>
+      <button onclick="closeModal()" class="text-slate-400 hover:text-white text-xl">✕</button>
+    </div>
+    <div id="modalBody" class="p-6 overflow-y-auto space-y-3"></div>
+    <div class="flex flex-wrap justify-end gap-3 px-6 py-4 border-t border-slate-800">
+      <button onclick="exportCSV()" class="action-btn px-4 py-2 rounded-xl glass text-sm text-slate-300 hover:text-white">📤 Export CSV</button>
+      <button onclick="closeModal()" class="action-btn px-4 py-2 rounded-xl glass text-sm text-slate-300 hover:text-white">Cancel</button>
+      <button id="approveBtn" onclick="saveReview()" class="action-btn hidden px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 text-sm font-semibold">✓ Save & Approve</button>
+    </div>
+  </div>
+</div>
+
+<footer class="border-t border-slate-800/50">
+  <div class="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-slate-500">© 2026 Tanush Sharma · DocuExtract AI</div>
+</footer>
+
+<script>
+const API = "/api/v1";
+let current = null, currentMode = "view";
+
+const CHIP = {
+  extracted:    ["✓ Auto-Approved", "st-high"],
+  reviewed:     ["✓ Human Approved", "st-high"],
+  needs_review: ["⚠ Needs Review", "st-mid"],
+  failed:       ["✕ Failed", "st-low"],
+  uploaded:     ["⏳ Processing", "st-info"]
+};
+
+function chipHtml(status) {
+  const c = CHIP[status] || CHIP.uploaded;
+  return `<span class="text-[10px] px-2.5 py-1 rounded-full border font-medium ${c[1]}">${c[0]}</span>`;
+}
+
+async function loadDocs() {
+  try {
+    const res = await fetch(API + "/documents/");
+    const data = await res.json();
+    const docs = data.documents || [];
+
+    document.getElementById("statTotal").textContent = docs.length;
+    document.getElementById("statOk").textContent = docs.filter(d => d.status === "extracted" || d.status === "reviewed").length;
+    document.getElementById("statRev").textContent = docs.filter(d => d.status === "needs_review").length;
+    document.getElementById("statFail").textContent = docs.filter(d => d.status === "failed").length;
+
+    const rows = document.getElementById("docRows");
+    document.getElementById("emptyMsg").classList.toggle("hidden", docs.length > 0);
+    rows.innerHTML = docs.map(d => `
+      <tr class="row-hover">
+        <td class="px-5 py-3.5 font-medium">📄 ${d.filename}</td>
+        <td class="px-5 py-3.5 text-slate-400">${(d.document_type || "—").replace(/_/g, " ")}</td>
+        <td class="px-5 py-3.5">${chipHtml(d.status)}</td>
+        <td class="px-5 py-3.5 text-slate-500 text-xs">${(d.created_at || "").replace("T", " ").slice(0, 16)}</td>
+        <td class="px-5 py-3.5 text-right space-x-2">
+          <button onclick="openModal('${d.document_id}','view')" class="action-btn px-3 py-1.5 rounded-lg glass text-xs text-cyan-400">View</button>
+          <button onclick="openModal('${d.document_id}','review')" class="action-btn px-3 py-1.5 rounded-lg glass text-xs text-amber-400">Review</button>
+          <button onclick="quickCSV('${d.document_id}')" class="action-btn px-3 py-1.5 rounded-lg glass text-xs text-emerald-400">CSV</button>
+        </td>
+      </tr>`).join("");
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+async function openModal(id, mode) {
+  const res = await fetch(API + "/documents/" + id + "/extraction");
+  if (!res.ok) { alert("Extraction not available for this document."); return; }
+  current = await res.json();
+  currentMode = mode;
+
+  document.getElementById("modalTitle").textContent = "Document " + id.slice(0, 8);
+  const chip = document.getElementById("modalChip");
+  const c = CHIP[current.status] || CHIP.uploaded;
+  chip.className = "text-[10px] px-2 py-0.5 rounded-full border " + c[1];
+  chip.textContent = c[0];
+
+  const body = document.getElementById("modalBody");
+  const entries = Object.entries(current.fields || {});
+  body.innerHTML = entries.map(([name, f]) => {
+    const conf = Math.round((f.confidence ?? 0) * 100);
+    const cls = conf >= 85 ? "st-high" : conf >= 60 ? "st-mid" : "st-low";
+    const human = f.source === "human" ? "👤 " : "";
+    const valueBox = mode === "review"
+      ? `<input data-field="${name}" value="${(f.value ?? "").toString().replace(/"/g, "&quot;")}" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:border-cyan-500 outline-none" />`
+      : `<div class="bg-slate-900/60 border border-slate-800 rounded-lg px-3 py-2 text-sm">${f.value ?? "—"}</div>`;
+    return `
+      <div>
+        <div class="flex justify-between items-center mb-1">
+          <span class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">${name.replace(/_/g, " ")}</span>
+          <span class="text-[10px] px-2 py-0.5 rounded-full border ${cls}">${human}${conf}%</span>
+        </div>
+        ${valueBox}
+      </div>`;
+  }).join("") || `<p class="text-sm text-slate-500 text-center py-8">No fields extracted.</p>`;
+
+  const items = current.line_items || [];
+  if (items.length) {
+    const keys = Object.keys(items[0]);
+    body.innerHTML += `
+      <div class="pt-2">
+        <p class="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-2">Line Items</p>
+        <div class="overflow-x-auto rounded-lg border border-slate-800">
+          <table class="w-full text-xs">
+            <thead class="bg-slate-900/60 text-slate-400"><tr>${keys.map(k => `<th class="text-left px-3 py-2">${k}</th>`).join("")}</tr></thead>
+            <tbody class="divide-y divide-slate-800">${items.map(r => `<tr>${keys.map(k => `<td class="px-3 py-2">${r[k] ?? "—"}</td>`).join("")}</tr>`).join("")}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+
+  document.getElementById("approveBtn").classList.toggle("hidden", mode !== "review");
+  document.getElementById("modal").classList.remove("hidden");
+}
+
+function closeModal() {
+  document.getElementById("modal").classList.add("hidden");
+  current = null;
+}
+
+async function saveReview() {
+  if (!current) return;
+  const corrections = {};
+  document.querySelectorAll("[data-field]").forEach(el => corrections[el.dataset.field] = el.value);
+  const res = await fetch(API + "/reviews/" + current.document_id, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      corrections: corrections,
+      review_status: "approved",
+      reviewer_name: "Tanush Sharma",
+      comments: "Reviewed via dashboard"
+    })
+  });
+  if (res.ok) {
+    closeModal();
+    loadDocs();
+  } else {
+    alert("Review save failed: " + res.status);
+  }
+}
+
+function exportCSV() {
+  if (!current) return;
+  const rows = [["Field", "Value", "Confidence", "Source"]];
+  Object.entries(current.fields || {}).forEach(([k, f]) =>
+    rows.push([k, f.value ?? "", f.confidence ?? "", f.source ?? ""]));
+  (current.line_items || []).forEach((it, i) =>
+    rows.push(["line_item_" + (i + 1), JSON.stringify(it), "", ""]));
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+  a.download = "docuextract_" + (current.document_id || "data").slice(0, 8) + ".csv";
+  a.click();
+}
+
+async function quickCSV(id) {
+  const res = await fetch(API + "/documents/" + id + "/extraction");
+  if (res.ok) { current = await res.json(); exportCSV(); }
+}
+
+loadDocs();
+</script>
+</body>
+</html>

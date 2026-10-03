@@ -1,25 +1,20 @@
-# DocuExtract AI
+# DocuExtract AI — Multimodal Document Intelligence
 
-DocuExtract AI is a document extraction and validation platform for invoices, receipts, and other structured business documents. The project combines preprocessing, OCR, layout analysis, validation, and human review workflows in a single modular service.
+DocuExtract AI is a production-grade document extraction and validation platform for invoices, receipts, bank statements, ID cards and forms. It combines preprocessing, OCR, AI-powered (VLM) extraction, rule-based cross-validation, confidence scoring and a human review workflow in a single modular service.
 
-## Structure
+> Built by **Tanush Sharma** — AI / Full-Stack Developer
+> GitHub: https://github.com/tanushsharma-dev · LinkedIn: https://www.linkedin.com/in/tanush-sharma-8b1807280/ · Email: tanushsharma052@gmail.com
 
-- `app/` – FastAPI application, extraction pipeline, schemas, and business logic.
-- `worker/` – background task workers.
-- `ui/` – Streamlit interface.
-- `evaluation/` – evaluation tooling and reference datasets.
-- `tests/` – automated tests.
-- `scripts/` – data and database utilities.
+## ✨ Features
 
-## Getting started
+- 📄 **Multi-modal extraction** — PDF & image (JPEG/PNG/WebP/TIFF) support with in-browser PDF preview
+- 🧠 **5 document types** — invoice, receipt, bank statement, ID card, form
+- 🤖 **Multi-provider AI engine** — Groq (Qwen3.8-27B vision) primary with automatic Google Gemini fallback & model rotation
+- 🎯 **Confidence scoring** — per-field confidence with auto-approval (≥85%) and review routing
+- 👁️ **Human review console** — edit fields, approve documents, full audit trail (`HumanReview` table)
+- 📊 **Document dashboard** — live stats, history table, view / review / export actions
+- 📤 **CSV export** — one-click export of extracted fields + line items
+- ☁️ **Neon PostgreSQL** — serverless cloud database
+- ⚡ **Premium web UI** — FastAPI + Tailwind CSS with client-side caching
 
-1. Create a virtual environment.
-2. Install dependencies from `requirements.txt`.
-3. Copy `.env.example` to `.env` and adjust settings.
-4. Run the API with `uvicorn app.main:app --reload`.
-
-## Docker
-
-```bash
-docker compose up --build
-```
+## 🏗️ Architecture

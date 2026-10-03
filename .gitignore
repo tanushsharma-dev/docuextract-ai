@@ -1,15 +1,27 @@
+# ===== SECRETS (kabhi push nahi hone chahiye) =====
+.env
+.env.local
+*.pem
+
+# ===== Python =====
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
-.env
 .venv/
 venv/
-.pytest_cache/
-.mypy_cache/
+env/
+
+# ===== Local DB =====
 *.db
 *.sqlite3
-storage/
-.DS_Store
-.idea/
+
+# ===== Storage artifacts (uploads/processed) =====
+storage/uploads/
+storage/processed/
+
+# ===== IDE / OS =====
 .vscode/
+.idea/
+.DS_Store
+Thumbs.db

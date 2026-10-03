@@ -1,0 +1,7 @@
+[
+  "tests/test_api.py::test_documents_route_returns_empty_list",
+  "tests/test_api.py::test_health_check",
+  "tests/test_extraction.py::test_pipeline_returns_expected_keys",
+  "tests/test_validation.py::test_validation_flags_missing_vendor",
+  "tests/test_validation.py::test_validation_passes_for_valid_payload"
+]
