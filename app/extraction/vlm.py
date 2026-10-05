@@ -1,167 +1,242 @@
+import os
 import json
 import logging
-import base64
-import io
-
-import PIL.Image
-from google import genai
-from google.genai import types
+import time
+from typing import List, Dict, Any, Union
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-_client = None
-_groq_client = None
-
-GEMINI_MODELS = ["gemini-3.5-flash-lite", "gemini-3.8-flash", "gemini-2.5-flash"]
-GROQ_MODELS = ["qwen/qwen3.8-27b"]
-
 SUPPORTED_TYPES = ["invoice", "receipt", "bank_statement", "id_card", "form"]
 
-SCHEMAS = {
-    "invoice": '{"vendor_name":"string or null","invoice_number":"string or null","invoice_date":"YYYY-MM-DD or null","currency":"3-letter code or null","subtotal":"number or null","tax":"number or null","total_amount":"number or null","customer_name":"string or null","line_items":[{"description":"string","quantity":"number","unit_price":"number","amount":"number"}]}',
-    "receipt": '{"merchant_name":"string or null","receipt_date":"YYYY-MM-DD or null","total_amount":"number or null","tax":"number or null","payment_method":"string or null","currency":"3-letter code or null","items":[{"description":"string","amount":"number"}]}',
-    "bank_statement": '{"bank_name":"string or null","account_holder":"string or null","account_number":"string or null","statement_period":"string or null","opening_balance":"number or null","closing_balance":"number or null","currency":"3-letter code or null","transactions":[{"date":"YYYY-MM-DD","description":"string","amount":"number"}]}',
-    "id_card": '{"full_name":"string or null","id_number":"string or null","date_of_birth":"YYYY-MM-DD or null","issue_date":"YYYY-MM-DD or null","expiry_date":"YYYY-MM-DD or null","address":"string or null","document_type":"string or null"}',
-    "form": '{"form_title":"string or null","full_name":"string or null","email":"string or null","phone":"string or null","date":"YYYY-MM-DD or null","organization":"string or null"}',
-}
+# ✅ Better model + fallback
+GROQ_TEXT_MODEL = "openai/gpt-oss-120b"      # primary (better extraction)
+GROQ_FALLBACK_MODEL = "openai/gpt-oss-20b"   # fallback (faster)
 
-RULES = ("You are a precise document extraction engine. Extract structured information from this document. "
-         "Rules: 1. Return ONLY valid JSON. 2. If a field is missing, use null. 3. Do NOT invent values. "
-         "4. Dates in YYYY-MM-DD. 5. Amounts as numbers without symbols. 6. Currency as 3-letter code if visible. "
-         "7. If unsure, prefer null.\nSchema:\n")
+REQUEST_TIMEOUT = 45
+MAX_TOKENS = 4096          # ✅ increased for full extraction
+MAX_PAGES_TO_PROCESS = 1
+
+_ocr_engine = None
 
 
-def _is_pdf(path):
-    try:
-        with open(path, "rb") as f:
-            return f.read(5) == b"%PDF-"
-    except Exception:
-        return False
+def _get_ocr():
+    global _ocr_engine
+    if _ocr_engine is None:
+        from rapidocr_onnxruntime import RapidOCR
+        t0 = time.time()
+        _ocr_engine = RapidOCR()
+        logger.info(f"RapidOCR loaded in {time.time()-t0:.1f}s")
+    return _ocr_engine
 
 
-def get_client():
-    global _client
-    if _client is None:
-        if not settings.GEMINI_API_KEY:
-            raise ValueError("GEMINI_API_KEY not set in .env!")
-        _client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    return _client
+def _ocr_image(image_path: str) -> str:
+    engine = _get_ocr()
+    result, _ = engine(image_path)
+    if not result:
+        return ""
+    return "\n".join(line[1] for line in result if line and len(line) > 1)
 
 
-def get_groq_client():
-    global _groq_client
-    if _groq_client is None:
-        from groq import Groq
-        if not settings.GROQ_API_KEY:
-            raise ValueError("GROQ_API_KEY not set in .env!")
-        _groq_client = Groq(api_key=settings.GROQ_API_KEY)
-    return _groq_client
+def _groq_client():
+    from groq import Groq
+    api_key = getattr(settings, "GROQ_API_KEY", None) or os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise RuntimeError("GROQ_API_KEY not set")
+    return Groq(api_key=api_key, timeout=REQUEST_TIMEOUT)
 
 
-def build_prompt(document_type):
-    return RULES + SCHEMAS.get(document_type, SCHEMAS["invoice"])
+# ==========================================================
+# ✅ DETAILED PROMPT — saare fields maango
+# ==========================================================
+def _build_prompt(text: str, document_type: str) -> str:
+    type_hint = document_type if document_type and document_type != "auto" else "auto-detect"
+    
+    return f"""You are a document data extraction expert. Extract ALL structured data from this {type_hint} document.
+
+OCR TEXT:
+---
+{text[:8000]}
+---
+
+Return ONLY valid JSON in this EXACT format (no markdown, no explanation):
+
+{{
+  "document_type": "invoice|receipt|bank_statement|id_card|form",
+  "fields": {{
+    "invoice_number": {{"value": "exact value from document", "confidence": 0.95}},
+    "invoice_date": {{"value": "date string", "confidence": 0.95}},
+    "due_date": {{"value": "...", "confidence": 0.95}},
+    "order_id": {{"value": "...", "confidence": 0.95}},
+    "seller_name": {{"value": "...", "confidence": 0.95}},
+    "seller_address": {{"value": "...", "confidence": 0.9}},
+    "seller_gstin": {{"value": "...", "confidence": 0.95}},
+    "buyer_name": {{"value": "...", "confidence": 0.95}},
+    "buyer_address": {{"value": "...", "confidence": 0.9}},
+    "buyer_gstin": {{"value": "...", "confidence": 0.9}},
+    "subtotal": {{"value": "...", "confidence": 0.95}},
+    "tax": {{"value": "...", "confidence": 0.95}},
+    "total": {{"value": "...", "confidence": 0.95}},
+    "currency": {{"value": "INR|USD|EUR", "confidence": 0.95}},
+    "payment_status": {{"value": "...", "confidence": 0.9}},
+    "payment_method": {{"value": "...", "confidence": 0.9}}
+  }},
+  "line_items": [
+    {{"description": "item name", "quantity": 1, "unit_price": 0.0, "amount": 0.0}}
+  ]
+}}
+
+CRITICAL RULES:
+1. Extract EVERY field you can find - do not skip any.
+2. For each field, give exact value from the document.
+3. For line items table - extract ALL rows (Description, Qty, Price, Amount).
+4. Confidence: 0.95 = definitely correct, 0.7 = probably, 0.5 = uncertain.
+5. If a field is not visible, OMIT it (do not include with "null").
+6. Output RAW JSON only — no ```json fences, no explanation.
+7. The document currency appears to be INR (based on ₹ symbol).
+"""
 
 
-def _parse(text):
-    content = text.strip()
-    if content.startswith("```"):
-        content = content.split("```")[1]
-        if content.startswith("json"):
-            content = content[4:]
-    return json.loads(content.strip())
+def _extract_json(raw: str) -> dict:
+    raw = raw.strip()
+    # Strip markdown fences if any
+    if raw.startswith("```"):
+        parts = raw.split("```")
+        if len(parts) >= 2:
+            raw = parts[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.strip()
+    # Find JSON boundaries
+    start, end = raw.find("{"), raw.rfind("}")
+    if start >= 0 and end > start:
+        raw = raw[start:end + 1]
+    return json.loads(raw)
 
 
-def _to_image(file_path):
-    if _is_pdf(file_path):
-        import fitz
-        doc = fitz.open(file_path)
-        pix = doc[0].get_pixmap(dpi=150)
-        img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-        doc.close()
-        return img
-    return PIL.Image.open(file_path).convert("RGB")
-
-
-def _call_gemini(file_path, prompt):
-    client = get_client()
-    config = types.GenerateContentConfig(temperature=0.1, response_mime_type="application/json")
-    last_error = None
-
-    models = [settings.VLM_MODEL] + [m for m in GEMINI_MODELS if m != settings.VLM_MODEL]
-
-    for model in models:
+def _call_groq_text(prompt: str) -> str:
+    client = _groq_client()
+    last_err = None
+    for model in [GROQ_TEXT_MODEL, GROQ_FALLBACK_MODEL]:
         try:
-            if _is_pdf(file_path):
-                with open(file_path, "rb") as f:
-                    data = f.read()
-                contents = [prompt, types.Part.from_bytes(data=data, mime_type="application/pdf")]
-            else:
-                contents = [prompt, PIL.Image.open(file_path).convert("RGB")]
-
-            resp = client.models.generate_content(model=model, contents=contents, config=config)
-            logger.info(f"Gemini OK with model: {model}")
-            return _parse(resp.text)
-        except Exception as e:
-            last_error = e
-            logger.warning(f"Gemini model {model} failed: {e}")
-
-    raise last_error
-
-
-def _call_groq(file_path, prompt):
-    client = get_groq_client()
-    img = _to_image(file_path)
-    buf = io.BytesIO()
-    img.save(buf, format="PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode()
-    last_error = None
-
-    for model in GROQ_MODELS:
-        try:
-            response = client.chat.completions.create(
+            logger.info(f"Trying Groq model: {model}")
+            resp = client.chat.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": [
-                    {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}},
-                ]}],
+                messages=[
+                    {"role": "system", "content": "You are a precise data extraction engine. You output only valid JSON. You extract every field present in documents."},
+                    {"role": "user", "content": prompt},
+                ],
                 temperature=0.1,
-                response_format={"type": "json_object"},
+                max_tokens=MAX_TOKENS,
             )
-            logger.info(f"Groq OK with model: {model}")
-            return _parse(response.choices[0].message.content)
+            content = resp.choices[0].message.content or ""
+            logger.info(f"Groq {model} OK — {len(content)} chars")
+            return content
         except Exception as e:
-            last_error = e
-            logger.warning(f"Groq model {model} failed: {e}")
-
-    raise last_error
-
-
-def extract_with_vlm(file_path, document_type="invoice"):
-    prompt = build_prompt(document_type)
-    errors = []
-
-    if settings.VLM_PROVIDER.lower() == "groq":
-        order = [_call_groq, _call_gemini]
-    else:
-        order = [_call_gemini, _call_groq]
-
-    for fn in order:
-        try:
-            return fn(file_path, prompt)
-        except Exception as e:
-            errors.append(f"{fn.__name__}: {e}")
-
-    return {"error": " | ".join(errors)}
+            last_err = e
+            logger.warning(f"Groq {model} failed: {e}")
+            continue
+    raise RuntimeError(f"All Groq failed: {last_err}")
 
 
-def classify_document_type(ocr_text):
-    t = ocr_text.lower()
-    if any(k in t for k in ["bank statement", "account statement", "statement of account"]):
-        return "bank_statement"
-    if any(k in t for k in ["passport", "driving license", "identity card", "aadhaar", "id card"]):
-        return "id_card"
-    if any(k in t for k in ["receipt", "cash memo", "payment receipt"]):
-        return "receipt"
-    return "invoice"
+def _process_single_page(image_path: str, document_type: str, page_num: int,
+                          total_pages: int) -> Dict[str, Any]:
+    if not os.path.exists(image_path):
+        return {"fields": {}, "line_items": [], "_page": page_num}
+
+    t0 = time.time()
+    try:
+        logger.info(f"Page {page_num}/{total_pages} → OCR")
+        text = _ocr_image(image_path)
+        t_ocr = time.time() - t0
+        logger.info(f"Page {page_num} OCR took {t_ocr:.1f}s, {len(text)} chars")
+
+        if not text.strip():
+            return {"fields": {}, "line_items": [], "_page": page_num, "error": "empty OCR"}
+
+        logger.info(f"Page {page_num}/{total_pages} → Groq text")
+        prompt = _build_prompt(text, document_type)
+        raw = _call_groq_text(prompt)
+        t_llm = time.time() - t0 - t_ocr
+
+        parsed = _extract_json(raw)
+        parsed["_page"] = page_num
+
+        # Log fields count
+        n_fields = len(parsed.get("fields", {}))
+        n_items = len(parsed.get("line_items", []))
+        logger.info(f"Page {page_num}/{total_pages} ✓ OCR {t_ocr:.1f}s + LLM {t_llm:.1f}s = {t_ocr+t_llm:.1f}s | {n_fields} fields, {n_items} items")
+        return parsed
+
+    except Exception as e:
+        import traceback
+        t_total = time.time() - t0
+        logger.error(f"Page {page_num}/{total_pages} ✗ {t_total:.1f}s: {type(e).__name__}: {e}")
+        logger.error(traceback.format_exc())
+        return {"fields": {}, "line_items": [], "_page": page_num, "error": str(e)}
+
+
+def classify_document_type(image_path: str) -> str:
+    return "auto"
+
+
+def extract_with_vlm(image_paths: Union[str, List[str]], document_type: str = "auto") -> Dict[str, Any]:
+    if isinstance(image_paths, str):
+        image_paths = [image_paths]
+    if not image_paths:
+        return {"status": "failed", "error": "no pages", "fields": {}, "line_items": []}
+
+    total = len(image_paths)
+    pages = image_paths[:MAX_PAGES_TO_PROCESS]
+    logger.info(f"VLM: {total} page(s) | processing {len(pages)}")
+
+    _get_ocr()
+
+    t_all = time.time()
+    results = [_process_single_page(p, document_type, i + 1, total) for i, p in enumerate(pages)]
+    logger.info(f"VLM total: {time.time()-t_all:.1f}s")
+
+    first_result = results[0] if results else None
+    if first_result and first_result.get("error"):
+        err = first_result.get("error")
+        logger.error(f"VLM FAILED: {err}")
+        return {"status": "failed", "error": err, "fields": {}, "line_items": [], "page_count": total}
+
+    merged_fields = {}
+    merged_items = []
+    detected_type = document_type
+
+    for pr in results:
+        if not pr:
+            continue
+        if pr.get("document_type") and detected_type == "auto":
+            detected_type = pr["document_type"]
+        for k, v in (pr.get("fields") or {}).items():
+            if isinstance(v, dict):
+                val = v.get("value")
+                conf = v.get("confidence", 0.5)
+            else:
+                val = v
+                conf = 0.5
+            if val is None or val == "" or str(val).lower() in ("none", "null", "n/a"):
+                continue
+            if k not in merged_fields or conf > merged_fields[k].get("confidence", 0):
+                merged_fields[k] = {"value": val, "confidence": conf}
+        for item in (pr.get("line_items") or []):
+            if item and not all(v is None for v in item.values()):
+                merged_items.append(item)
+
+    logger.info(f"VLM FINAL: {len(merged_fields)} fields, {len(merged_items)} line items")
+    return {
+        "status": "success",
+        "document_type": detected_type,
+        "fields": merged_fields,
+        "line_items": merged_items,
+        "page_count": total,
+    }
+
+
+run_vlm_extraction = extract_with_vlm
+extract_document = extract_with_vlm
+VLM_MODELS = [GROQ_TEXT_MODEL, GROQ_FALLBACK_MODEL]

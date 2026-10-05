@@ -1,72 +1,194 @@
+"""
+Extraction pipeline — orchestrates:
+  1. Preprocessing (PDF → images, resize)
+  2. OCR (optional, VLM handles text)
+  3. Document type classification
+  4. VLM extraction (parallel, fast models)
+  5. Rules (field normalization)
+  6. Merge + confidence scoring
+  7. Validation
+
+Returns dict shaped for worker/tasks.py:
+{
+  "status": "success" | "failed",
+  "document_type": "invoice",
+  "page_count": 4,
+  "fields": {field_name: {"value", "confidence", "source", "requires_review"}},
+  "line_items": [...],
+  "requires_review": bool,
+  "error": "..." (only if failed)
+}
+"""
+
+import os
 import logging
-from typing import Dict
+
 from app.extraction.preprocessing import preprocess_document
-from app.extraction.ocr import run_ocr
-from app.extraction.vlm import extract_with_vlm, classify_document_type, SUPPORTED_TYPES
-from app.extraction.rules import rule_based_extraction
-from app.extraction.validation import validate_extracted_data
-from app.extraction.confidence import calculate_field_confidence, requires_review
+from app.extraction.vlm import (
+    extract_with_vlm,
+    classify_document_type,
+    SUPPORTED_TYPES,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def run_extraction_pipeline(file_path: str, output_dir: str, doc_type_hint: str = "auto") -> Dict:
-    result = {"status": "success", "document_type": None, "fields": {}, "line_items": [], "validation": {}, "requires_review": False}
+def run_extraction_pipeline(input_path: str, output_dir: str,
+                             document_type: str = "auto") -> dict:
+    """
+    Main pipeline entry point.
+    Called by worker/tasks.py.
+    """
+    logger.info("Step 1: Preprocessing")
+    try:
+        doc_kind, image_paths = preprocess_document(input_path, output_dir)
+    except Exception as e:
+        logger.error(f"Preprocessing failed: {e}")
+        return {"status": "failed", "error": f"Preprocessing error: {e}",
+                "fields": {}, "line_items": [], "page_count": 0}
+
+    if not image_paths:
+        logger.error("No images produced from input")
+        return {"status": "failed", "error": "No images produced",
+                "fields": {}, "line_items": [], "page_count": 0}
+
+    logger.info(f"Preprocessed into {len(image_paths)} page image(s)")
+
+    # ============================================================
+    # Step 2: OCR — skipped, VLM handles text extraction
+    # ============================================================
+    logger.info("Step 2: OCR")
+
+    # ============================================================
+    # Step 3: Document type
+    # ============================================================
+    logger.info("Step 3: Document type")
+    doc_type = document_type or "auto"
+    if doc_type in ("auto", "", None):
+        try:
+            doc_type = classify_document_type(image_paths[0])
+            logger.info(f"Auto-detected document type: {doc_type}")
+        except Exception as e:
+            logger.warning(f"classify_document_type failed: {e} — defaulting to invoice")
+            doc_type = "invoice"
+
+    # Safety net — ensure doc_type is valid
+    if doc_type not in SUPPORTED_TYPES:
+        doc_type = "invoice"
+
+    # ============================================================
+    # Step 4: VLM extraction (parallel, fast models)
+    # ============================================================
+    logger.info("Step 4: VLM extraction")
+    try:
+        vlm_result = extract_with_vlm(image_paths, doc_type)
+    except Exception as e:
+        logger.error(f"VLM extraction crashed: {e}")
+        return {"status": "failed", "error": f"VLM error: {e}",
+                "fields": {}, "line_items": [], "page_count": len(image_paths)}
+
+    if vlm_result.get("status") == "failed":
+        logger.error(f"VLM returned failed: {vlm_result.get('error')}")
+        return {
+            "status": "failed",
+            "error": vlm_result.get("error", "VLM failed"),
+            "fields": {}, "line_items": [],
+            "page_count": len(image_paths),
+        }
+
+    # ============================================================
+    # Step 5: Rules (field normalization / cleanup)
+    # ============================================================
+    logger.info("Step 5: Rules")
+    raw_fields = vlm_result.get("fields", {}) or {}
+    try:
+        from app.extraction.rules import apply_rules
+        raw_fields = apply_rules(raw_fields, doc_type)
+        logger.info(f"Rules applied to {len(raw_fields)} fields")
+    except ImportError:
+        logger.info("rules.py not found — skipping")
+    except AttributeError:
+        logger.info("apply_rules not found in rules.py — skipping")
+    except Exception as e:
+        logger.warning(f"Rules failed: {e} — keeping raw fields")
+
+    # ============================================================
+    # Step 6: Merge + confidence
+    # Normalize each field into {value, confidence, source, requires_review}
+    # ============================================================
+    logger.info("Step 6: Merge + confidence")
+    final_fields = {}
+    for k, v in raw_fields.items():
+        # Skip metadata-style keys that leak from VLM response
+        if k in ("status", "document_type", "page_count", "fields",
+                 "line_items", "_page", "error"):
+            continue
+
+        if isinstance(v, dict):
+            val = v.get("value")
+            conf = v.get("confidence", 0.5)
+            source = v.get("source", "vlm")
+        else:
+            val = v
+            conf = 0.5
+            source = "vlm"
+
+        # Skip empty values
+        if val is None or val == "":
+            continue
+
+        try:
+            conf = float(conf)
+        except (ValueError, TypeError):
+            conf = 0.5
+
+        # Clamp confidence
+        conf = max(0.0, min(1.0, conf))
+
+        final_fields[k] = {
+            "value": val,
+            "confidence": conf,
+            "source": source,
+            "requires_review": conf < 0.7,
+        }
+
+    logger.info(f"Merged into {len(final_fields)} clean field(s)")
+
+    # ============================================================
+    # Step 7: Validation
+    # ============================================================
+    logger.info("Step 7: Validation")
+    requires_review = any(f["requires_review"] for f in final_fields.values())
 
     try:
-        logger.info("Step 1: Preprocessing")
-        image_paths = preprocess_document(file_path, output_dir)
-
-        logger.info("Step 2: OCR")
-        ocr_text = run_ocr(image_paths[0] if image_paths else file_path)["full_text"]
-
-        logger.info("Step 3: Document type")
-        doc_type = doc_type_hint if (doc_type_hint != "auto" and doc_type_hint in SUPPORTED_TYPES) else classify_document_type(ocr_text)
-        result["document_type"] = doc_type
-
-        logger.info("Step 4: VLM extraction")
-        vlm_output = extract_with_vlm(file_path, doc_type)
-        if "error" in vlm_output:
-            logger.error(f"VLM failed: {vlm_output['error']}")
-            result["status"] = "failed"
-            result["error"] = vlm_output["error"]
-            result["page_count"] = 1
-            return result
-        logger.info("Step 5: Rules")
-        rule_output = rule_based_extraction(ocr_text, doc_type)
-
-        logger.info("Step 6: Merge + confidence")
-        merged = {}
-        for field in set(list(vlm_output.keys()) + list(rule_output.keys())):
-            if field in ("line_items", "items", "transactions"):
-                continue
-            vlm_val = vlm_output.get(field)
-            rule_val = rule_output.get(field)
-            conf = calculate_field_confidence(field_name=field, ocr_value=None, vlm_value=vlm_val, rule_value=rule_val, validation_passed=True)
-            merged[field] = {
-                "value": vlm_val if vlm_val is not None else rule_val,
-                "confidence": round(conf, 3),
-                "requires_review": requires_review(conf),
-                "source": "vlm" if vlm_val is not None else "rule",
-            }
-            if requires_review(conf):
-                result["requires_review"] = True
-
-        result["fields"] = merged
-        result["line_items"] = vlm_output.get("line_items") or vlm_output.get("items") or vlm_output.get("transactions") or []
-
-        logger.info("Step 7: Validation")
-        flat = {k: v["value"] for k, v in merged.items()}
-        flat["line_items"] = result["line_items"]
-        result["validation"] = validate_extracted_data(flat, doc_type)
-        if not result["validation"]["valid"]:
-            result["requires_review"] = True
-
-        result["page_count"] = len(image_paths) if image_paths else 1
-
+        from app.extraction.validation import validate_fields
+        result = validate_fields(final_fields, doc_type)
+        # Support both return shapes:
+        #   (fields, requires_review) tuple  OR  fields dict
+        if isinstance(result, tuple) and len(result) == 2:
+            final_fields, requires_review = result
+        elif isinstance(result, dict):
+            final_fields = result
+            requires_review = any(
+                f.get("requires_review", False)
+                for f in final_fields.values()
+                if isinstance(f, dict)
+            )
+    except ImportError:
+        logger.info("validation.py not found — skipping")
+    except AttributeError:
+        logger.info("validate_fields not found — skipping")
     except Exception as e:
-        logger.error(f"Pipeline failed: {e}")
-        result["status"] = "failed"
-        result["error"] = str(e)
+        logger.warning(f"Validation failed: {e} — using unvalidated fields")
 
-    return result
+    # ============================================================
+    # Return shaped result
+    # ============================================================
+    return {
+        "status": "success",
+        "document_type": vlm_result.get("document_type", doc_type),
+        "page_count": vlm_result.get("page_count", len(image_paths)),
+        "fields": final_fields,
+        "line_items": vlm_result.get("line_items", []),
+        "requires_review": bool(requires_review),
+    }

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuExtract AI — Review Queue</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+  html, body { background:#050814; color:#e2e8f0; min-height:100vh; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(139,92,246,.20), transparent 60%),
+      radial-gradient(1000px 500px at 10% 0%, rgba(6,182,212,.15), transparent 60%),
+      #050814;
+  }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center;
+            padding:18px 40px; max-width:1500px; margin:0 auto; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-mark { width:42px; height:42px; border-radius:12px;
+                background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+                display:grid; place-items:center; font-size:20px;
+                box-shadow:0 8px 24px rgba(139,92,246,.35); }
+  .brand h1 { font-size:18px; }
+  .brand h1 span { background:linear-gradient(135deg,#22d3ee,#a78bfa);
+                   -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .brand small { display:block; font-size:10px; letter-spacing:.25em; color:#64748b; margin-top:2px; }
+  .nav { display:flex; align-items:center; gap:10px; }
+  .nav a, .nav button { color:#cbd5e1; text-decoration:none; font-size:13px;
+    padding:9px 16px; border-radius:22px;
+    border:1px solid rgba(148,163,184,.15);
+    background:rgba(15,23,42,.6); cursor:pointer; transition:.2s;
+    font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+  .nav a:hover, .nav button:hover { color:#22d3ee; border-color:rgba(34,211,238,.4); }
+  .nav .user { display:flex; align-items:center; gap:8px; padding-left:6px; }
+  .nav .avatar { width:26px; height:26px; border-radius:50%;
+                 background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+                 display:grid; place-items:center; font-size:12px; font-weight:700; color:#0b1220; }
+
+  .hero { max-width:1500px; margin:20px auto 0; padding:0 40px; }
+  .hero-badge { display:inline-flex; align-items:center; gap:8px;
+    background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25);
+    color:#fbbf24; font-size:12px; font-weight:500;
+    padding:6px 14px; border-radius:999px; margin-bottom:14px; }
+  .hero-badge .dot { width:6px; height:6px; border-radius:50%; background:#fbbf24; box-shadow:0 0 10px #fbbf24; }
+  .hero h2 { font-size:36px; font-weight:800; letter-spacing:-.02em; }
+  .hero h2 .accent { background:linear-gradient(120deg,#22d3ee,#8b5cf6 60%,#a78bfa);
+                     -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p { margin-top:8px; color:#94a3b8; font-size:14px; }
+
+  .workspace { max-width:1500px; margin:24px auto 60px; padding:0 40px; }
+
+  .split { display:grid; grid-template-columns:0.9fr 1.1fr; gap:20px; }
+
+  .panel { background:rgba(9,13,28,.75); border:1px solid rgba(148,163,184,.12);
+           border-radius:16px; overflow:hidden; backdrop-filter:blur(12px);
+           display:flex; flex-direction:column; }
+
+  .preview-head { display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px; border-bottom:1px solid rgba(148,163,184,.1);
+    background:rgba(15,23,42,.6); }
+  .pg-chip { display:flex; align-items:center; gap:8px; font-size:12px; color:#94a3b8; }
+  .pg-chip .num { background:rgba(148,163,184,.15); padding:3px 9px; border-radius:6px;
+                  color:#e2e8f0; font-weight:600; }
+  .preview-body { flex:1; min-height:640px; max-height:720px; background:#0a0e1a;
+                  display:grid; place-items:center; overflow:auto; padding:20px; }
+  .preview-body img { max-width:100%; max-height:100%; object-fit:contain;
+                      border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,.6); }
+  .preview-body iframe { width:100%; height:100%; border:0; border-radius:8px; }
+  .preview-empty { text-align:center; color:#475569; font-size:13px; padding:40px; }
+  .preview-empty .big { font-size:46px; opacity:.4; margin-bottom:12px; }
+
+  .fields-head {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:16px 20px 12px; border-bottom:1px solid rgba(148,163,184,.1);
+  }
+  .fields-head h3 { font-size:15px; font-weight:700; color:#e2e8f0; }
+  .fields-head .count { font-size:12px; color:#64748b; }
+
+  .fields-scroll { padding:16px 20px 24px; overflow-y:auto; max-height:640px; }
+
+  .field-card {
+    background:rgba(15,23,42,.65);
+    border:1px solid rgba(148,163,184,.12);
+    border-radius:12px; padding:16px 18px;
+    margin-bottom:12px; transition:.2s;
+  }
+  .field-card:hover { border-color:rgba(34,211,238,.3); }
+  .field-card.corrected { border-color:rgba(16,185,129,.4); background:rgba(16,185,129,.05); }
+
+  .field-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .field-name { font-size:13px; font-weight:700; color:#e2e8f0;
+                letter-spacing:.05em; text-transform:uppercase; }
+  .conf-badge { font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; }
+  .conf-red { color:#f87171; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); }
+  .conf-amber { color:#fbbf24; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); }
+
+  .current-row {
+    display:grid; grid-template-columns:100px 1fr; gap:10px;
+    align-items:center; margin-bottom:10px;
+  }
+  .current-label { font-size:11px; color:#64748b; text-transform:uppercase;
+                   letter-spacing:.08em; font-weight:600; }
+  .current-value {
+    font-size:14px; font-weight:600; color:#cbd5e1;
+    background:rgba(15,23,42,.6); padding:8px 12px; border-radius:8px;
+    border:1px solid rgba(148,163,184,.1);
+    word-break:break-word;
+  }
+  .current-value.empty { color:#475569; font-style:italic; font-weight:400; }
+
+  .input-row { display:flex; gap:10px; align-items:center; }
+  .input-row input {
+    flex:1; background:rgba(15,23,42,.9);
+    border:1px solid rgba(148,163,184,.15);
+    color:#e2e8f0; padding:10px 14px; border-radius:8px;
+    font-size:14px; font-family:inherit; transition:.2s;
+  }
+  .input-row input:focus { outline:none; border-color:#22d3ee;
+                           box-shadow:0 0 0 3px rgba(34,211,238,.1); }
+  .input-row input::placeholder { color:#475569; }
+
+  .btn-save {
+    background:linear-gradient(135deg,#22d3ee,#14b8a6);
+    color:#052e2b; border:none; padding:10px 18px;
+    border-radius:8px; font-weight:700; font-size:13px;
+    cursor:pointer; transition:.2s; font-family:inherit;
+    white-space:nowrap;
+  }
+  .btn-save:hover { transform:translateY(-1px); box-shadow:0 8px 20px rgba(34,211,238,.35); }
+  .btn-save:disabled { opacity:.5; cursor:not-allowed; transform:none; }
+
+  .field-reason {
+    font-size:11px; color:#fbbf24; margin-top:10px;
+    display:flex; align-items:center; gap:6px;
+  }
+
+  .empty-state { padding:80px 20px; text-align:center; color:#475569; font-size:14px; }
+  .empty-state .big { font-size:56px; opacity:.35; margin-bottom:14px; }
+
+  .loading { padding:60px 20px; text-align:center; color:#22d3ee; font-size:14px; }
+
+  .toast {
+    position:fixed; bottom:30px; right:30px;
+    background:rgba(16,185,129,.95); color:#fff;
+    padding:14px 22px; border-radius:10px;
+    font-size:14px; font-weight:600;
+    box-shadow:0 10px 30px rgba(16,185,129,.4);
+    transform:translateY(100px); opacity:0;
+    transition:.3s; z-index:999;
+  }
+  .toast.show { transform:translateY(0); opacity:1; }
+  .toast.error { background:rgba(239,68,68,.95); box-shadow:0 10px 30px rgba(239,68,68,.4); }
+
+  @media (max-width:900px) {
+    .split { grid-template-columns:1fr; }
+    .topbar, .workspace, .hero { padding-left:20px; padding-right:20px; }
+    .hero h2 { font-size:26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">📄</div>
+    <div>
+      <h1>DocuExtract <span>AI</span></h1>
+      <small>DOCUMENT INTELLIGENCE</small>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/ui/upload.html">⬆ Upload</a>
+    <a href="/ui/index.html">📁 My Documents</a>
+    <a href="/ui/analytics.html">📊 Analytics</a>
+    <div class="user">
+      <div class="avatar" id="avatar">U</div>
+      <span id="username">user</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    <span id="queueCount">Loading review queue...</span>
+  </div>
+  <h2>Review & <span class="accent">Correct</span> Extracted Fields</h2>
+  <p>AI flagged these fields as low-confidence. Verify and correct them to improve accuracy.</p>
+</div>
+
+<div class="workspace">
+  <div class="split">
+    <!-- LEFT: Document preview -->
+    <div class="panel">
+      <div class="preview-head">
+        <div class="pg-chip"><span class="num" id="pgNum">—</span> <span id="pgOf">of 0</span></div>
+        <div class="pg-chip" id="docName">No document</div>
+      </div>
+      <div class="preview-body" id="preview">
+        <div class="preview-empty">
+          <div class="big">📄</div>
+          Select a field to see document
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Fields list -->
+    <div class="panel">
+      <div class="fields-head">
+        <h3>Fields Needing Review</h3>
+        <span class="count" id="fieldCount">—</span>
+      </div>
+      <div class="fields-scroll" id="fieldsList">
+        <div class="loading">⏳ Loading review queue…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">Saved!</div>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/ui/login.html';
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const name = payload.name || payload.email || payload.sub || 'user';
+    document.getElementById('username').textContent = name.split('@')[0];
+    document.getElementById('avatar').textContent = (name[0] || 'U').toUpperCase();
+  } catch(e) {}
+
+  function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/ui/login.html';
+  }
+
+  function toast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast show' + (isError ? ' error' : '');
+    setTimeout(() => t.className = 'toast' + (isError ? ' error' : ''), 2500);
+  }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function confClass(c) {
+    if (c < 0.4) return 'conf-red';
+    return 'conf-amber';
+  }
+
+  let fieldsData = [];
+
+  // ============================================================
+  // FAST LOAD — parallel fetch + limited docs + timeout
+  // ============================================================
+  async function loadReviewQueue() {
+    const t0 = performance.now();
+    try {
+      // STEP 1: fetch documents
+      const docsRes = await fetch('/api/v1/documents/', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
+      if (!docsRes.ok) throw new Error('HTTP ' + docsRes.status);
+      const docsData = await docsRes.json();
+      const docs = docsData.documents || [];
+
+      // STEP 2: only look at docs that need review OR might have low-conf fields
+      // Limit to 15 most recent to avoid slow load
+      const candidates = docs
+        .filter(d => {
+          const s = (d.status || '').toLowerCase();
+          return s === 'needs_review' || s === 'extracted';
+        })
+        .slice(0, 15);
+
+      if (!candidates.length) {
+        renderQueue([]);
+        return;
+      }
+
+      // STEP 3: fetch ALL extractions in PARALLEL (Promise.all)
+      const fetchWithTimeout = (url, ms = 8000) => {
+        return Promise.race([
+          fetch(url, { headers: { 'Authorization': 'Bearer ' + token } })
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null),
+          new Promise(res => setTimeout(() => res(null), ms))
+        ]);
+      };
+
+      const extractions = await Promise.all(
+        candidates.map(d => fetchWithTimeout('/api/v1/documents/' + d.document_id + '/extraction'))
+      );
+
+      // STEP 4: flatten into review items
+      const allFields = [];
+      for (let i = 0; i < candidates.length; i++) {
+        const doc = candidates[i];
+        const ex = extractions[i];
+        if (!ex || !ex.fields) continue;
+        for (const [fname, fdata] of Object.entries(ex.fields)) {
+          const conf = (fdata && fdata.confidence) ?? 1;
+          const needsReview = (fdata && fdata.requires_review) || conf < 0.7;
+          if (needsReview) {
+            allFields.push({
+              document_id: doc.document_id,
+              filename: doc.filename,
+              document_type: doc.document_type,
+              field_name: fname,
+              value: fdata.value,
+              confidence: conf,
+              source: fdata.source,
+            });
+          }
+        }
+      }
+
+      const elapsed = Math.round(performance.now() - t0);
+      console.log(`Review queue loaded in ${elapsed}ms — ${allFields.length} fields`);
+      renderQueue(allFields);
+    } catch (e) {
+      document.getElementById('fieldsList').innerHTML =
+        '<div class="empty-state"><div class="big">⚠️</div>Could not load queue: ' + escapeHtml(e.message) + '</div>';
+    }
+  }
+
+  function renderQueue(fields) {
+    fieldsData = fields;
+    const list = document.getElementById('fieldsList');
+    const cnt = document.getElementById('queueCount');
+    const fc = document.getElementById('fieldCount');
+
+    if (!fields.length) {
+      list.innerHTML = '<div class="empty-state"><div class="big">✨</div>All clear — no fields need review</div>';
+      cnt.textContent = 'No documents need review';
+      fc.textContent = '0 fields';
+      return;
+    }
+
+    cnt.textContent = fields.length + ' field(s) flagged for review';
+    fc.textContent = fields.length + ' fields';
+
+    list.innerHTML = fields.map((f, i) => {
+      const confPct = Math.round((f.confidence ?? 0) * 100) + '%';
+      const cls = confClass(f.confidence);
+      const empty = f.value === null || f.value === undefined || f.value === '';
+      return `
+        <div class="field-card" data-idx="${i}">
+          <div class="field-head">
+            <div class="field-name">${escapeHtml(f.field_name.replace(/_/g, ' '))}</div>
+            <span class="conf-badge ${cls}">${confPct}</span>
+          </div>
+          <div class="current-row">
+            <span class="current-label">Current</span>
+            <div class="current-value ${empty ? 'empty' : ''}">${empty ? '(no value extracted)' : escapeHtml(f.value)}</div>
+          </div>
+          <div class="input-row">
+            <input type="text" placeholder="Corrected value yahan likho…"
+                   data-doc="${f.document_id}" data-field="${f.field_name}"
+                   id="input-${i}">
+            <button class="btn-save" onclick="saveCorrection(${i}, this)">💾 Save</button>
+          </div>
+          <div class="field-reason">⚠ Low confidence (${confPct}) — please verify</div>
+        </div>
+      `;
+    }).join('');
+
+    // Click a card → show doc info
+    document.querySelectorAll('.field-card').forEach((card, i) => {
+      card.onclick = (e) => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+        showPreview(fields[i]);
+      };
+    });
+
+    if (fields[0]) showPreview(fields[0]);
+  }
+
+  function showPreview(field) {
+    document.getElementById('docName').textContent = field.filename || field.document_id.slice(0, 8);
+    const box = document.getElementById('preview');
+    box.innerHTML =
+      '<div style="width:100%; padding:20px; text-align:left;">' +
+        '<div style="background:rgba(15,23,42,.85); padding:22px; border-radius:12px; color:#cbd5e1; font-size:13px; line-height:1.9;">' +
+          '<div style="color:#22d3ee; font-weight:700; font-size:11px; letter-spacing:.15em; text-transform:uppercase; margin-bottom:14px;">Document Info</div>' +
+          '<div><b style="color:#94a3b8;">File:</b> ' + escapeHtml(field.filename || '—') + '</div>' +
+          '<div><b style="color:#94a3b8;">Type:</b> ' + escapeHtml(field.document_type || '—') + '</div>' +
+          '<div><b style="color:#94a3b8;">Document ID:</b> <span style="font-family:monospace;font-size:11px;">' + escapeHtml(field.document_id) + '</span></div>' +
+          '<hr style="border:0;border-top:1px solid rgba(148,163,184,.1);margin:14px 0;">' +
+          '<div style="color:#22d3ee; font-weight:700; font-size:11px; letter-spacing:.15em; text-transform:uppercase; margin-bottom:10px;">Flagged Field</div>' +
+          '<div><b style="color:#94a3b8;">Field:</b> ' + escapeHtml(field.field_name) + '</div>' +
+          '<div><b style="color:#94a3b8;">Value:</b> ' + escapeHtml(field.value ?? '(empty)') + '</div>' +
+          '<div><b style="color:#94a3b8;">Confidence:</b> ' + Math.round((field.confidence ?? 0) * 100) + '%</div>' +
+          '<div><b style="color:#94a3b8;">Source:</b> ' + escapeHtml(field.source || 'vlm') + '</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  async function saveCorrection(idx, btn) {
+    const input = document.getElementById('input-' + idx);
+    const newVal = input.value.trim();
+    if (!newVal) { toast('Value khaali hai', true); return; }
+
+    const docId = input.dataset.doc;
+    const fieldName = input.dataset.field;
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Saving...';
+
+    try {
+      const body = JSON.stringify({ field_name: fieldName, corrected_value: newVal });
+      const tryPaths = [
+        '/api/v1/documents/' + docId + '/corrections',
+        '/api/v1/documents/' + docId + '/fields/' + fieldName + '/correct',
+        '/api/v1/corrections',
+      ];
+
+      let ok = false;
+      for (const p of tryPaths) {
+        try {
+          const r = await fetch(p, {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + token,
+              'Content-Type': 'application/json',
+            },
+            body,
+          });
+          if (r.ok || r.status === 201) { ok = true; break; }
+        } catch (e) {}
+      }
+
+      if (!ok) throw new Error('No correction endpoint found');
+
+      const card = document.querySelector('.field-card[data-idx="' + idx + '"]');
+      card.classList.add('corrected');
+      card.querySelector('.current-value').textContent = newVal;
+      card.querySelector('.current-value').classList.remove('empty');
+      card.querySelector('.field-reason').innerHTML = '✅ Corrected';
+      card.querySelector('.field-reason').style.color = '#34d399';
+      input.value = '';
+
+      toast('✅ Correction saved');
+    } catch (e) {
+      toast('❌ ' + e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Save';
+    }
+  }
+
+  loadReviewQueue();
+</script>
+</body>
+</html>

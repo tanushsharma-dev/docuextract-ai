@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuExtract AI - Login & Signup</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter','Segoe UI',sans-serif; }
+  body { background:#0b1220; color:#e2e8f0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .card { background:rgba(15,23,42,.8); border:1px solid rgba(148,163,184,.1); border-radius:20px; width:100%; max-width:420px; padding:32px; box-shadow:0 20px 50px rgba(0,0,0,.5); }
+  .logo { text-align:center; margin-bottom:24px; }
+  .logo h1 { font-size:24px; background:linear-gradient(135deg,#06b6d4,#a855f7); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .tabs { display:flex; background:#1e293b; border-radius:10px; padding:4px; margin-bottom:24px; }
+  .tab { flex:1; text-align:center; padding:10px; border-radius:8px; cursor:pointer; font-size:14px; font-weight:500; color:#94a3b8; transition:.2s; }
+  .tab.active { background:#0f172a; color:#fff; }
+  .form-group { margin-bottom:16px; }
+  label { display:block; font-size:12px; color:#94a3b8; margin-bottom:6px; font-weight:500; text-transform:uppercase; letter-spacing:.05em; }
+  .pass-wrap { position:relative; }
+  input { width:100%; padding:12px 14px; background:#0f172a; border:1px solid #334155; border-radius:10px; color:#fff; font-size:14px; outline:none; transition:.2s; }
+  input:focus { border-color:#06b6d4; box-shadow:0 0 0 3px rgba(6,182,212,.1); }
+  .pass-wrap input { padding-right:44px; }
+  .eye { position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:17px; color:#64748b; padding:2px; }
+  .eye:hover { color:#22d3ee; }
+  .btn { width:100%; padding:12px; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; transition:.2s; margin-top:8px; }
+  .btn-primary { background:linear-gradient(135deg,#06b6d4,#0891b2); color:#fff; }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(6,182,212,.3); }
+  .btn-primary:disabled { opacity:0.7; cursor:not-allowed; }
+  .btn-google { background:#fff; color:#0f172a; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .divider { text-align:center; margin:20px 0; color:#64748b; font-size:12px; position:relative; }
+  .divider::before, .divider::after { content:''; position:absolute; top:50%; width:40%; height:1px; background:#334155; }
+  .divider::before { left:0; } .divider::after { right:0; }
+  .msg { padding:10px; border-radius:8px; font-size:13px; margin-bottom:16px; display:none; text-align:center; word-break:break-word; }
+  .msg.error { background:rgba(239,68,68,.1); color:#f87171; border:1px solid rgba(239,68,68,.2); display:block; }
+  .msg.success { background:rgba(16,185,129,.1); color:#34d399; border:1px solid rgba(16,185,129,.2); display:block; }
+  .hidden { display:none !important; }
+  .loader { display:inline-block; width:16px; height:16px; border:2px solid #fff; border-bottom-color:transparent; border-radius:50%; animation:spin .6s linear infinite; margin-right:8px; vertical-align:middle; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  .success-screen { text-align:center; padding:40px 20px; }
+  .success-screen h2 { color:#34d399; margin-bottom:12px; }
+  .success-screen p { color:#94a3b8; margin-bottom:20px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">
+    <h1>📄 DocuExtract AI</h1>
+    <p style="font-size:13px; color:#64748b; margin-top:4px;">Document Intelligence Platform</p>
+  </div>
+
+  <div id="alertBox" class="msg"></div>
+
+  <!-- Auth Forms -->
+  <div id="authSection">
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('login', this)">Login</div>
+      <div class="tab" onclick="switchTab('signup', this)">Sign Up</div>
+    </div>
+
+    <!-- Login Form -->
+    <form id="loginForm" onsubmit="handleLogin(event)">
+      <div class="form-group">
+        <label>Email or Username</label>
+        <input type="text" id="loginUser" required placeholder="tanushsharma052@gmail.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="loginPass" required placeholder="••••••••">
+          <button type="button" class="eye" onclick="togglePass('loginPass', this)" title="Show/Hide password">👁️</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="loginBtn">Sign In</button>
+    </form>
+
+    <!-- Signup Form -->
+    <form id="signupForm" class="hidden" onsubmit="handleSignup(event)">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="signName" placeholder="Tanush Sharma">
+      </div>
+      <div class="form-group">
+        <label>Username</label>
+        <input type="text" id="signUser" placeholder="tanush">
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="signEmail" required placeholder="you@gmail.com">
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <div class="pass-wrap">
+          <input type="password" id="signPass" required placeholder="Min 6 characters">
+          <button type="button" class="eye" onclick="togglePass('signPass', this)" title="Show/Hide password">👁️</button>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary" id="signupBtn">Create Account</button>
+    </form>
+
+    <div class="divider">OR</div>
+    <a href="/api/v1/auth/google" style="text-decoration:none;">
+      <button type="button" class="btn btn-google">
+        <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/></svg>
+        Sign in with Google
+      </button>
+    </a>
+  </div>
+
+  <!-- OTP Section -->
+  <div id="otpSection" class="hidden">
+    <h3 style="text-align:center; margin-bottom:8px;">✉️ Verify Your Email</h3>
+    <p style="text-align:center; font-size:13px; color:#94a3b8; margin-bottom:20px;">
+      We sent a 6-digit code to <br><b id="otpEmailDisplay" style="color:#22d3ee;"></b>
+    </p>
+    <form onsubmit="handleVerify(event)">
+      <div class="form-group">
+        <input type="text" id="otpInput" maxlength="6" placeholder="123456" style="text-align:center; font-size:24px; letter-spacing:8px;" required>
+      </div>
+      <button type="submit" class="btn btn-primary" id="verifyBtn">Verify & Login</button>
+    </form>
+    <p style="text-align:center; margin-top:16px; font-size:13px;">
+      Didn't get it? <a href="#" onclick="handleResend()" style="color:#06b6d4; text-decoration:none; font-weight:600;">Resend Code</a>
+    </p>
+  </div>
+
+  <!-- Success Screen (shown after login) -->
+  <div id="successSection" class="hidden">
+    <div class="success-screen">
+      <h2>✅ Login Successful!</h2>
+      <p>Redirecting to dashboard...</p>
+      <div style="font-size:32px;">🚀</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const API = '/api/v1/auth';
+  let currentEmail = '';
+
+  console.log('=== LOGIN PAGE LOADED ===');
+  console.log('Current URL:', window.location.href);
+  console.log('Existing token:', localStorage.getItem('token'));
+
+  // Google login ke baad token yaha aata hai
+  if (window.location.hash.includes('google_token')) {
+    console.log('Google token detected in URL hash');
+    const p = new URLSearchParams(window.location.hash.slice(1));
+    localStorage.setItem('token', p.get('google_token'));
+    localStorage.setItem('refresh_token', p.get('refresh') || '');
+    localStorage.setItem('user', JSON.stringify({ username: p.get('user') }));
+    console.log('Google login complete, redirecting...');
+    window.location.href = '/ui/index.html';
+  }
+
+  function togglePass(id, btn) {
+    const inp = document.getElementById(id);
+    if (inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+    else { inp.type = 'password'; btn.textContent = '👁️'; }
+  }
+
+  function switchTab(tab, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('signupForm').classList.toggle('hidden', tab !== 'signup');
+    hideAlert();
+  }
+
+  function showAlert(msg, type='error') {
+    const box = document.getElementById('alertBox');
+    box.textContent = msg;
+    box.className = 'msg ' + type;
+  }
+  function hideAlert() { document.getElementById('alertBox').className = 'msg'; }
+
+  function setLoading(btnId, isLoading) {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    if(isLoading) { 
+      btn.innerHTML = '<span class="loader"></span> Processing...'; 
+      btn.disabled = true; 
+    } else { 
+      btn.disabled = false;
+      // Restore original text based on button
+      if (btnId === 'loginBtn') btn.textContent = 'Sign In';
+      else if (btnId === 'signupBtn') btn.textContent = 'Create Account';
+      else if (btnId === 'verifyBtn') btn.textContent = 'Verify & Login';
+    }
+  }
+
+  async function parseRes(res) {
+    const text = await res.text();
+    try { return JSON.parse(text); }
+    catch { return { detail: 'Server error: ' + text.slice(0, 120) }; }
+  }
+
+  // CRITICAL: Bulletproof redirect function
+  function goToDashboard() {
+    console.log('=== GOING TO DASHBOARD ===');
+    console.log('Token stored:', localStorage.getItem('token') ? 'YES' : 'NO');
+    
+    // Show success screen first
+    document.getElementById('authSection').classList.add('hidden');
+    document.getElementById('otpSection').classList.add('hidden');
+    document.getElementById('successSection').classList.remove('hidden');
+    
+    // Force redirect after 500ms (gives user time to see success)
+    setTimeout(function() {
+      console.log('Redirecting now...');
+      window.location.href = '/ui/index.html';
+    }, 500);
+  }
+
+  async function handleSignup(e) {
+    e.preventDefault();
+    console.log('=== SIGNUP STARTED ===');
+    setLoading('signupBtn', true);
+    
+    const body = {
+      full_name: document.getElementById('signName').value,
+      username: document.getElementById('signUser').value,
+      email: document.getElementById('signEmail').value,
+      password: document.getElementById('signPass').value
+    };
+    
+    try {
+      console.log('Sending signup request...');
+      const res = await fetch(API + '/signup', {
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify(body)
+      });
+      const data = await parseRes(res);
+      console.log('Signup response:', { status: res.status, data });
+      
+      if (!res.ok) throw new Error(data.detail || 'Signup failed');
+      
+      currentEmail = body.email;
+      document.getElementById('otpEmailDisplay').textContent = body.email;
+      document.getElementById('authSection').classList.add('hidden');
+      document.getElementById('otpSection').classList.remove('hidden');
+      showAlert('OTP sent to your email! Check inbox.', 'success');
+    } catch (err) { 
+      console.error('Signup error:', err);
+      showAlert(err.message); 
+    } finally { 
+      setLoading('signupBtn', false); 
+    }
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+    console.log('=== LOGIN STARTED ===');
+    setLoading('loginBtn', true);
+    
+    const body = {
+      username: document.getElementById('loginUser').value,
+      password: document.getElementById('loginPass').value
+    };
+    
+    console.log('Login attempt for:', body.username);
+    
+    try {
+      console.log('Sending login request...');
+      const res = await fetch(API + '/login', {
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify(body)
+      });
+      
+      const data = await parseRes(res);
+      console.log('Login response:', { status: res.status, data });
+      
+      if (!res.ok) {
+        if (res.status === 403) {
+          currentEmail = body.username.includes('@') ? body.username : '';
+          document.getElementById('otpEmailDisplay').textContent = currentEmail || 'your email';
+          document.getElementById('authSection').classList.add('hidden');
+          document.getElementById('otpSection').classList.remove('hidden');
+          showAlert('Email verify karna zaroori hai — OTP bhej diya gaya!', 'success');
+          return;
+        }
+        throw new Error(data.detail || 'Login failed');
+      }
+      
+      // Store tokens
+      console.log('Storing tokens...');
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      console.log('Tokens stored successfully');
+      console.log('Token in localStorage:', localStorage.getItem('token') ? 'YES' : 'NO');
+      
+      // Redirect to dashboard
+      goToDashboard();
+      
+    } catch (err) { 
+      console.error('Login error:', err);
+      showAlert(err.message); 
+    } finally {
+      setLoading('loginBtn', false);
+    }
+  }
+
+  async function handleVerify(e) {
+    e.preventDefault();
+    console.log('=== VERIFY OTP STARTED ===');
+    setLoading('verifyBtn', true);
+    
+    const body = { email: currentEmail, otp: document.getElementById('otpInput').value };
+    try {
+      const res = await fetch(API + '/verify-otp', {
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify(body)
+      });
+      const data = await parseRes(res);
+      if (!res.ok) throw new Error(data.detail || 'Invalid OTP');
+      
+      localStorage.setItem('token', data.access_token);
+      localStorage.setItem('refresh_token', data.refresh_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      goToDashboard();
+    } catch (err) { 
+      showAlert(err.message); 
+    } finally {
+      setLoading('verifyBtn', false);
+    }
+  }
+
+  async function handleResend() {
+    try {
+      const res = await fetch(API + '/resend-otp', {
+        method: 'POST', 
+        headers: {'Content-Type':'application/json'}, 
+        body: JSON.stringify({email: currentEmail})
+      });
+      const data = await parseRes(res);
+      if (!res.ok) throw new Error(data.detail);
+      showAlert('New OTP sent!', 'success');
+    } catch (err) { showAlert(err.message); }
+  }
+</script>
+</body>
+</html>

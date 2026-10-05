@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuExtract AI — Intelligent Document Processing</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+  html, body { background:#050814; color:#e2e8f0; min-height:100vh; }
+  body { background-image:
+    radial-gradient(1200px 600px at 80% -10%, rgba(139,92,246,.22), transparent 60%),
+    radial-gradient(1000px 500px at 10% 0%, rgba(6,182,212,.15), transparent 60%); }
+
+  .topbar { display:flex; justify-content:space-between; align-items:center;
+    padding:18px 40px; max-width:1400px; margin:0 auto; }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-mark { width:42px; height:42px; border-radius:12px;
+    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+    display:grid; place-items:center; font-size:20px;
+    box-shadow:0 8px 24px rgba(139,92,246,.35); }
+  .brand h1 { font-size:18px; }
+  .brand h1 span { background:linear-gradient(135deg,#22d3ee,#a78bfa);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .brand small { display:block; font-size:10px; letter-spacing:.25em; color:#64748b; margin-top:2px; }
+  .nav { display:flex; align-items:center; gap:10px; }
+  .nav a, .nav button { color:#cbd5e1; text-decoration:none; font-size:13px;
+    padding:9px 16px; border-radius:22px;
+    border:1px solid rgba(148,163,184,.15);
+    background:rgba(15,23,42,.6); cursor:pointer;
+    font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+  .nav a:hover { color:#22d3ee; border-color:rgba(34,211,238,.4); }
+  .nav .user { display:flex; align-items:center; gap:8px; padding-left:6px; }
+  .nav .avatar { width:26px; height:26px; border-radius:50%;
+    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+    display:grid; place-items:center; font-size:12px; font-weight:700; color:#0b1220; }
+
+  .container { max-width:1400px; margin:20px auto 0; padding:0 40px; }
+
+  .hero { text-align:center; margin-bottom:30px; }
+  .hero-badge { display:inline-flex; align-items:center; gap:8px;
+    background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.25);
+    color:#22d3ee; font-size:12px; font-weight:500;
+    padding:6px 14px; border-radius:999px; margin-bottom:18px; }
+  .hero-badge .dot { width:6px; height:6px; border-radius:50%;
+    background:#22d3ee; box-shadow:0 0 10px #22d3ee; }
+  .hero h2 { font-size:44px; font-weight:800; letter-spacing:-.025em; line-height:1.1;
+    max-width:900px; margin:0 auto; }
+  .hero h2 .accent { background:linear-gradient(120deg,#22d3ee,#8b5cf6 60%,#a78bfa);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .hero p { margin:14px auto 0; max-width:640px; color:#94a3b8; font-size:15px; line-height:1.6; }
+
+  .pills-wrap { text-align:center; margin:30px 0; }
+  .pills { display:inline-flex; justify-content:center; gap:6px;
+    background:rgba(15,23,42,.7); border:1px solid rgba(148,163,184,.12);
+    padding:6px; border-radius:999px; }
+  .pill { padding:10px 22px; border-radius:999px; border:none; background:transparent;
+    color:#94a3b8; cursor:pointer; font-size:14px; font-weight:500;
+    font-family:inherit; }
+  .pill:hover { color:#e2e8f0; }
+  .pill.active { background:linear-gradient(135deg,#22d3ee,#14b8a6);
+    color:#052e2b; font-weight:700;
+    box-shadow:0 8px 24px rgba(34,211,238,.35); }
+
+  .dropzone { border:1.5px dashed rgba(148,163,184,.3);
+    border-radius:18px; padding:26px; text-align:center;
+    background:rgba(9,13,28,.6); cursor:pointer; margin-bottom:24px; }
+  .dropzone:hover, .dropzone.drag { border-color:#22d3ee; background:rgba(6,182,212,.06); }
+  .dz-row { display:flex; align-items:center; justify-content:center; gap:14px; }
+  .dz-icon { width:40px; height:40px; border-radius:10px;
+    background:linear-gradient(135deg,#3b82f6,#8b5cf6);
+    display:grid; place-items:center; font-size:18px; }
+  .dz-text { text-align:left; }
+  .dz-title { font-size:15px; font-weight:600; color:#e2e8f0; margin-bottom:3px; }
+  .dz-sub { font-size:12px; color:#64748b; }
+  .dz-sub code { color:#22d3ee; background:rgba(34,211,238,.1); padding:1px 6px; border-radius:4px; }
+
+  .split { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  .panel { background:rgba(9,13,28,.75); border:1px solid rgba(148,163,184,.12);
+    border-radius:16px; overflow:hidden; display:flex; flex-direction:column; }
+
+  .preview-head { display:flex; justify-content:space-between; align-items:center;
+    padding:12px 16px; border-bottom:1px solid rgba(148,163,184,.1);
+    background:rgba(15,23,42,.6); font-size:12px; color:#94a3b8; }
+  .preview-body { flex:1; min-height:620px; max-height:680px; background:#0a0e1a;
+    display:flex; align-items:center; justify-content:center;
+    padding:20px; overflow:auto; }
+  .preview-body img { max-width:100%; max-height:100%; object-fit:contain; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,.6); }
+  .preview-body iframe { width:100%; height:100%; border:0; border-radius:8px; }
+  .preview-body .placeholder { text-align:center; color:#475569; font-size:13px; }
+  .preview-body .placeholder .big { font-size:46px; opacity:.4; margin-bottom:12px; }
+
+  /* Receipt paper */
+  .receipt-paper { background:#f8f8f3; color:#1a1a1a; font-family:'Courier New', Consolas, monospace;
+    font-size:10px; line-height:1.5; padding:26px 22px 22px;
+    width:340px; margin:20px auto; border-radius:2px;
+    box-shadow:0 10px 50px rgba(0,0,0,.7); position:relative; }
+  .receipt-paper::before { content:''; position:absolute; top:-6px; left:0; right:0; height:6px;
+    background:radial-gradient(circle at 6px 0, transparent 6px, #f8f8f3 6px) repeat-x;
+    background-size:12px 6px; }
+  .receipt-paper::after { content:''; position:absolute; bottom:-6px; left:0; right:0; height:6px;
+    background:radial-gradient(circle at 6px 6px, #f8f8f3 6px, transparent 6px) repeat-x;
+    background-size:12px 6px; }
+  .r-logo { font-family:'Brush Script MT','Segoe Script',cursive; font-size:32px; text-align:center;
+    color:#c8102e; font-weight:700; letter-spacing:-.02em; margin-bottom:6px; line-height:1; }
+  .r-addr { text-align:center; font-size:9px; line-height:1.45; margin-bottom:8px; }
+  .r-meta { font-size:9px; margin-bottom:8px; letter-spacing:-.02em; text-align:center; }
+  .r-divider { border-top:1px dashed #999; margin:6px 0; }
+  .r-item { margin-bottom:8px; }
+  .r-item-name { font-weight:700; font-size:10px; word-break:break-word; }
+  .r-item-row { display:flex; justify-content:space-between; font-size:9px; gap:10px; }
+  .r-item-row span:last-child { text-align:right; flex-shrink:0; }
+  .r-totals { margin-top:6px; }
+  .r-total-row { display:flex; justify-content:space-between; font-size:10px; gap:10px; }
+  .r-grand { font-weight:700; font-size:13px; border-top:1px solid #444; border-bottom:1px solid #444;
+    padding:4px 0; margin:4px 0; }
+  .r-thanks { text-align:center; font-size:8px; margin:12px 0 6px; line-height:1.4; }
+  .r-barcode { height:44px; margin:8px 0;
+    background: repeating-linear-gradient(90deg, #1a1a1a 0, #1a1a1a 2px, transparent 2px, transparent 3px,
+      #1a1a1a 3px, #1a1a1a 4px, transparent 4px, transparent 6px,
+      #1a1a1a 6px, #1a1a1a 8px, transparent 8px, transparent 9px,
+      #1a1a1a 9px, #1a1a1a 10px, transparent 10px, transparent 12px); }
+  .r-myw { font-family:'Brush Script MT',cursive; font-size:22px; text-align:center; color:#c8102e;
+    margin:4px 0 2px; line-height:1; }
+  .r-savings { text-align:center; font-size:9px; font-weight:700; }
+
+  .tabs { display:flex; gap:24px; padding:16px 20px 0;
+    border-bottom:1px solid rgba(148,163,184,.1); }
+  .tab { padding:8px 0 14px; font-size:14px; color:#64748b; cursor:pointer;
+    border-bottom:2px solid transparent; background:none;
+    border-top:none; border-left:none; border-right:none; font-family:inherit; }
+  .tab.active { color:#22d3ee; border-bottom-color:#22d3ee; font-weight:600; }
+
+  .results-body { padding:20px; max-height:620px; overflow-y:auto; }
+  .results-empty { text-align:center; padding:60px 20px; color:#475569; font-size:13px; }
+  .results-empty .big { font-size:52px; opacity:.35; margin-bottom:14px; }
+
+  .field-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .field-card { background:rgba(15,23,42,.65); border:1px solid rgba(148,163,184,.12);
+    border-radius:12px; padding:14px 16px; position:relative; }
+  .field-label { font-size:10px; letter-spacing:.15em; text-transform:uppercase;
+    color:#64748b; font-weight:600; margin-bottom:6px; }
+  .field-value { font-size:20px; font-weight:700; color:#f1f5f9; word-break:break-word; }
+  .field-conf { position:absolute; top:12px; right:12px; font-size:10px;
+    font-weight:700; padding:3px 8px; border-radius:6px; }
+  .conf-high { color:#34d399; background:rgba(16,185,129,.12); border:1px solid rgba(16,185,129,.3); }
+  .conf-med { color:#fbbf24; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); }
+  .conf-low { color:#f87171; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); }
+
+  .meta-bar { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; }
+  .badge-ok { display:inline-flex; align-items:center; gap:6px;
+    background:rgba(16,185,129,.12); color:#34d399;
+    border:1px solid rgba(16,185,129,.3);
+    padding:6px 12px; border-radius:999px; font-size:12px; font-weight:500; }
+  .tag { font-size:12px; color:#94a3b8; border:1px solid rgba(148,163,184,.2);
+    padding:5px 12px; border-radius:999px; }
+  .btn-csv { font-size:12px; color:#22d3ee; background:rgba(34,211,238,.1);
+    border:1px solid rgba(34,211,238,.3); padding:5px 12px; border-radius:999px;
+    cursor:pointer; font-family:inherit; }
+  .btn-csv:hover { background:rgba(34,211,238,.2); }
+
+  /* Vendor demo card */
+  .vendor-box { margin:0 20px 16px; background:rgba(15,23,42,.65);
+    border:1px solid rgba(148,163,184,.12); border-radius:14px; overflow:hidden; }
+  .vendor-box-top { display:grid; grid-template-columns:1fr 1fr;
+    border-bottom:1px solid rgba(148,163,184,.1); }
+  .vendor-logo-cell { display:flex; align-items:center; justify-content:center;
+    padding:22px; border-right:1px solid rgba(148,163,184,.1); }
+  .vendor-logo { font-size:32px; font-weight:800; color:#fff; letter-spacing:-.02em;
+    display:flex; align-items:center; gap:10px; }
+  .vendor-logo-icon { width:42px; height:42px; border-radius:50%; background:#ef4444;
+    display:grid; place-items:center; color:#fff; font-size:22px; font-weight:800; }
+  .vendor-meta-cell { display:grid; grid-template-columns:1fr 1fr; }
+  .vendor-meta-item { padding:16px 18px; border-right:1px solid rgba(148,163,184,.1);
+    border-bottom:1px solid rgba(148,163,184,.1); }
+  .vendor-meta-item:nth-child(2n) { border-right:none; }
+  .vendor-meta-item:nth-child(3), .vendor-meta-item:nth-child(4) { border-bottom:none; }
+  .vendor-meta-label { font-size:10px; letter-spacing:.15em; text-transform:uppercase;
+    color:#64748b; font-weight:600; margin-bottom:6px; }
+  .vendor-meta-value { font-size:14px; font-weight:600; color:#e2e8f0; line-height:1.35;
+    word-break:break-word; }
+  .vendor-row-2 { display:grid; grid-template-columns:1fr 1fr; }
+  .vendor-cell { padding:16px 18px; border-right:1px solid rgba(148,163,184,.1); }
+  .vendor-cell:last-child { border-right:none; }
+  .vendor-cell .label { font-size:10px; letter-spacing:.15em; text-transform:uppercase;
+    color:#64748b; font-weight:600; margin-bottom:8px; }
+  .vendor-cell .val { font-size:14px; font-weight:600; color:#e2e8f0; }
+  .card-box { border:1px solid rgba(148,163,184,.12); border-radius:8px;
+    overflow:hidden; margin-top:8px; }
+  .card-head { display:grid; grid-template-columns:1fr 1fr 1fr;
+    background:rgba(15,23,42,.5); font-size:10px; letter-spacing:.1em;
+    text-transform:uppercase; color:#64748b; font-weight:600; }
+  .card-head > div { padding:6px 10px; border-right:1px solid rgba(148,163,184,.1); }
+  .card-head > div:last-child { border-right:none; }
+  .card-body { display:grid; grid-template-columns:1fr 1fr 1fr; font-size:13px;
+    color:#e2e8f0; font-weight:500; }
+  .card-body > div { padding:8px 10px; border-right:1px solid rgba(148,163,184,.1); }
+  .card-body > div:last-child { border-right:none; }
+
+  .section-title { display:flex; align-items:center; gap:8px; font-size:15px;
+    font-weight:700; color:#e2e8f0; padding:12px 20px 8px; }
+  .line-table { width:100%; border-collapse:collapse; font-size:13px; margin:0 0 20px; }
+  .line-table th { text-align:left; padding:10px 14px; font-size:10px;
+    letter-spacing:.12em; text-transform:uppercase; color:#64748b; font-weight:600;
+    border-bottom:1px solid rgba(148,163,184,.15); }
+  .line-table th.num, .line-table td.num { text-align:right; }
+  .line-table td { padding:12px 14px; color:#e2e8f0;
+    border-bottom:1px solid rgba(148,163,184,.08); font-weight:500; }
+  .line-table .idx { color:#64748b; font-weight:600; }
+
+  .status-bar { padding:12px 20px; font-size:13px; color:#22d3ee; }
+  .status-bar.error { color:#f87171; }
+  .progress { height:5px; background:rgba(148,163,184,.1); border-radius:3px;
+    overflow:hidden; margin-top:10px; }
+  .progress > div { height:100%; background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+    width:0%; transition:width .5s; }
+
+  .json-view { padding:20px; font-family:'JetBrains Mono','Consolas',monospace;
+    font-size:12px; color:#94a3b8; white-space:pre-wrap; word-break:break-word; }
+
+  /* ============================================================
+     ENHANCED FOOTER
+     ============================================================ */
+  .site-footer {
+    max-width:1400px; margin:40px auto 0; padding:24px 40px 32px;
+    border-top:1px solid rgba(148,163,184,.12);
+    display:flex; justify-content:space-between; align-items:center;
+    flex-wrap:wrap; gap:20px;
+  }
+  .footer-author { display:flex; align-items:center; gap:12px;
+    font-size:14px; color:#94a3b8; }
+  .footer-author .avatar { width:38px; height:38px; border-radius:50%;
+    background:linear-gradient(135deg,#22d3ee,#8b5cf6);
+    display:grid; place-items:center;
+    font-size:14px; font-weight:800; color:#0b1220;
+    box-shadow:0 0 16px rgba(34,211,238,.5);
+    letter-spacing:-.03em; flex-shrink:0; }
+  .footer-author strong { color:#e2e8f0; font-weight:800; font-size:16px;
+    letter-spacing:-.01em;
+    background:linear-gradient(120deg,#22d3ee 0%,#a78bfa 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    display:inline-block; }
+  .footer-links { display:flex; gap:18px; align-items:center; }
+  .footer-links a { color:#64748b; text-decoration:none; font-size:13px;
+    font-weight:500; transition:color .2s; position:relative; }
+  .footer-links a:hover { color:#22d3ee; }
+  .footer-links a::after { content:''; position:absolute; bottom:-3px; left:0; right:0;
+    height:1px; background:linear-gradient(90deg,#22d3ee,#8b5cf6);
+    transform:scaleX(0); transform-origin:left; transition:transform .25s; }
+  .footer-links a:hover::after { transform:scaleX(1); }
+  .footer-copy { color:#475569; font-size:11px; letter-spacing:.04em; }
+
+  @media (max-width:900px) {
+    .split { grid-template-columns:1fr; }
+    .hero h2 { font-size:32px; }
+    .container, .topbar, .site-footer { padding-left:20px; padding-right:20px; }
+    .field-grid { grid-template-columns:1fr; }
+    .site-footer { flex-direction:column; text-align:center; }
+    .footer-links { justify-content:center; }
+    .vendor-box-top { grid-template-columns:1fr; }
+    .vendor-logo-cell { border-right:none; border-bottom:1px solid rgba(148,163,184,.1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">
+    <div class="brand-mark">📄</div>
+    <div>
+      <h1>DocuExtract <span>AI</span></h1>
+      <small>DOCUMENT INTELLIGENCE</small>
+    </div>
+  </div>
+  <div class="nav">
+    <a href="/ui/analytics.html">📊 Analytics</a>
+    <a href="/ui/index.html">📁 My Documents</a>
+    <div class="user">
+      <div class="avatar" id="avatar">U</div>
+      <span id="username" style="font-size:13px;color:#cbd5e1;">user</span>
+    </div>
+    <button onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      Powered by OCR + Vision AI + Rules Engine
+    </div>
+    <h2>Intelligent <span class="accent">Document Processing</span></h2>
+    <p>Production-grade OCR, Vision AI, and a rules engine working together. Extract structured data from any business document — with confidence scoring you can trust.</p>
+  </div>
+
+  <div class="pills-wrap">
+    <div class="pills" id="pills">
+      <button class="pill active" data-type="auto">Auto Detect</button>
+      <button class="pill" data-type="receipt">Receipt</button>
+      <button class="pill" data-type="invoice">Invoice</button>
+      <button class="pill" data-type="bank_statement">Bank Statement</button>
+      <button class="pill" data-type="id_card">ID Card</button>
+      <button class="pill" data-type="form">Form</button>
+    </div>
+  </div>
+
+  <div class="dropzone" id="dropzone">
+    <div class="dz-row">
+      <div class="dz-icon">⬆</div>
+      <div class="dz-text">
+        <div class="dz-title">Drag or upload your own document(s) here</div>
+        <div class="dz-sub"><code>JPEG, PNG or PDF</code> — up to 10 files at once</div>
+      </div>
+    </div>
+    <input type="file" id="fileInput" accept=".jpg,.jpeg,.png,.pdf" multiple hidden>
+  </div>
+
+  <div id="statusBar"></div>
+
+  <div class="split">
+    <div class="panel">
+      <div class="preview-head">
+        <span id="filename">sample_receipt.png</span>
+        <span id="pageInfo">Page 1 of 1</span>
+      </div>
+      <div class="preview-body" id="preview"></div>
+    </div>
+
+    <div class="panel">
+      <div class="tabs">
+        <button class="tab active" data-tab="visual">Visualized Data</button>
+        <button class="tab" data-tab="json">JSON Data</button>
+      </div>
+      <div id="resultsVisual" class="results-body"></div>
+      <div id="resultsJson" style="display:none">
+        <div class="json-view" id="jsonContent">// No data yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="footer-author">
+    <div class="avatar">TS</div>
+    <span>Built by <strong>Tanush Sharma</strong></span>
+  </div>
+  <div class="footer-links">
+    <a href="mailto:tanushsharma052@gmail.com">Email</a>
+    <a href="https://www.linkedin.com/in/tanush-sharma-8b1807280/" target="_blank" rel="noopener">LinkedIn</a>
+    <a href="https://github.com/tanushsharma-dev" target="_blank" rel="noopener">GitHub</a>
+  </div>
+  <div class="footer-copy">© 2026 DocuExtract AI</div>
+</footer>
+
+<script>
+  const token = localStorage.getItem('token');
+  if (!token) window.location.href = '/ui/login.html';
+
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const name = payload.name || payload.email || payload.sub || 'user';
+    document.getElementById('username').textContent = name.split('@')[0];
+    document.getElementById('avatar').textContent = (name[0] || 'U').toUpperCase();
+  } catch(e) {}
+
+  function logout() {
+    localStorage.removeItem('token');
+    window.location.href = '/ui/login.html';
+  }
+
+  let docType = 'auto';
+  let pollTimer = null;
+  let currentRaw = null;
+  let currentTab = 'visual';
+  let pollStartTime = 0;
+
+  // Pills
+  document.querySelectorAll('.pill').forEach(p => {
+    p.onclick = () => {
+      document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      docType = p.dataset.type;
+      if (docType === 'auto') loadDemo();
+      else {
+        document.getElementById('preview').innerHTML =
+          '<div class="placeholder"><div class="big">📄</div>Upload a document to see preview</div>';
+        document.getElementById('filename').textContent = 'No document';
+        document.getElementById('pageInfo').textContent = '—';
+        document.getElementById('resultsVisual').innerHTML =
+          '<div class="results-empty"><div class="big">✨</div>Extracted fields will appear here</div>';
+      }
+    };
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      currentTab = t.dataset.tab;
+      document.getElementById('resultsVisual').style.display = currentTab === 'visual' ? '' : 'none';
+      document.getElementById('resultsJson').style.display = currentTab === 'json' ? '' : 'none';
+      if (currentTab === 'json' && currentRaw) {
+        document.getElementById('jsonContent').textContent = JSON.stringify(currentRaw, null, 2);
+      }
+    };
+  });
+
+  // Dropzone
+  const dz = document.getElementById('dropzone');
+  const fi = document.getElementById('fileInput');
+  dz.onclick = () => fi.click();
+  fi.onchange = () => { if (fi.files[0]) upload(fi.files[0]); };
+  dz.ondragover = e => { e.preventDefault(); dz.classList.add('drag'); };
+  dz.ondragleave = () => dz.classList.remove('drag');
+  dz.ondrop = e => {
+    e.preventDefault(); dz.classList.remove('drag');
+    if (e.dataTransfer.files[0]) upload(e.dataTransfer.files[0]);
+  };
+
+  function setStatus(html, cls) {
+    const s = document.getElementById('statusBar');
+    s.className = 'status-bar' + (cls ? ' ' + cls : '');
+    s.innerHTML = html;
+  }
+  function clearStatus() { document.getElementById('statusBar').innerHTML = ''; }
+
+  function escapeHtml(s) {
+    return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ============================================================
+  // DEMO: Walgreens Receipt
+  // ============================================================
+  const DEMO = {
+    document_id: "demo-sample-001",
+    status: "extracted",
+    document_type: "receipt",
+    vendor: { name: "Walgreens", phone: "650-342-2723",
+      type: "drugstores, convenience stores, cosmetics & beauty supply" },
+    receipt_date: "March 28, 2023, 1:10 pm",
+    payment: { card_number: "1850", name: "Visa ***1850", type: "visa" },
+    fields: {
+      vendor_name: { value: "Walgreens", confidence: 0.98 },
+      vendor_phone: { value: "650-342-2723", confidence: 0.94 },
+      vendor_type: { value: "drugstores, convenience stores, cosmetics & beauty supply", confidence: 0.85 },
+      receipt_date: { value: "March 28, 2023, 1:10 pm", confidence: 0.96 },
+      payment_card: { value: "Visa ***1850", confidence: 0.92 },
+      payment_type: { value: "visa", confidence: 0.94 },
+      subtotal: { value: "27.60", confidence: 0.95 },
+      sales_tax: { value: "1.83", confidence: 0.95 },
+      total: { value: "29.43", confidence: 0.97 },
+    },
+    line_items: [
+      { sku: "61126943157", item: "RED BULL ENRGY DRK CNS 8.4OZ 6PK", type: "food", quantity: 1, price: 9.99, total: 8.79 },
+      { sku: "00000007211", item: "CA REDMP VAL", type: "fee", quantity: 1, price: 0.00, total: 0.30 },
+      { sku: "04100000749", item: "NAB OREO CKTS C/P 5.25OZ WMS", type: "food", quantity: 1, price: 2.69, total: 2.69 },
+      { sku: "02840003205", item: "DORITOS NACHO CHEESE", type: "food", quantity: 1, price: 2.00, total: 2.00 },
+      { sku: "02100001315", item: "F/LAYS REGULAR 2.63OZ", type: "food", quantity: 1, price: 2.00, total: 2.00 },
+      { sku: "03760010022", item: "SCOTCH BRITE 6/PAD KITCHEN SPONGE", type: "household", quantity: 1, price: 4.79, total: 4.79 },
+      { sku: "01650058637", item: "PALMOLIVE DISH POWER", type: "household", quantity: 1, price: 1.49, total: 1.49 },
+      { sku: "02100000581", item: "SHIPPING BAG FEE", type: "fee", quantity: 1, price: 0.25, total: 0.25 },
+    ],
+  };
+
+  function demoReceiptHTML() {
+    return `<div class="receipt-paper">
+      <div class="r-logo">Walgreens</div>
+      <div class="r-addr">02296 191 E 3RD AVE<br>SAN MATEO, CA 94401<br>650-342-2723</div>
+      <div class="r-meta">117 &nbsp; 4782 &nbsp; 0022 &nbsp; 03/28/2023 &nbsp; 1:10 PM</div>
+      <div class="r-divider"></div>
+      <div class="r-item"><div class="r-item-name">RED BULL ENRGY DRK CNS 8.4OZ 6PK</div><div class="r-item-row"><span>61126943157</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 9.99</span></div><div class="r-item-row"><span>MYWALGREENS SAVINGS 1.20</span><span>8.79 SALE</span></div></div>
+      <div class="r-item"><div class="r-item-name">CA REDMP VAL</div><div class="r-item-row"><span>00000007211</span><span>0.30</span></div></div>
+      <div class="r-item"><div class="r-item-name">NAB OREO CKTS C/P 5.25OZ WMS</div><div class="r-item-row"><span>04400000749</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 2.69</span><span>2.69</span></div></div>
+      <div class="r-item"><div class="r-item-name">DORITOS NACHO CHEESE</div><div class="r-item-row"><span>02840003205</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>
+      <div class="r-item"><div class="r-item-name">F/LAYS REGULAR 2.63OZ</div><div class="r-item-row"><span>02100001315</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>
+      <div class="r-item"><div class="r-item-name">SCOTCH BRITE 6/PAD KITCHEN SPONGE</div><div class="r-item-row"><span>03760010022</span><span>A</span></div><div class="r-item-row"><span>4.79</span></div></div>
+      <div class="r-item"><div class="r-item-name">PALMOLIVE DISH POWER</div><div class="r-item-row"><span>01650058637</span><span>A</span></div><div class="r-item-row"><span>1.49</span></div></div>
+      <div class="r-item"><div class="r-item-name">SHIPPING BAG FEE</div><div class="r-item-row"><span>02100000581</span><span>0.25</span></div></div>
+      <div class="r-divider"></div>
+      <div class="r-totals"><div class="r-total-row"><span>SUBTOTAL</span><span>27.60</span></div><div class="r-total-row"><span>SALES TAX 6.50%</span><span>1.83</span></div><div class="r-total-row r-grand"><span>TOTAL</span><span>29.43</span></div></div>
+      <div class="r-totals"><div class="r-total-row"><span>VISA ACCT 1850</span><span>29.43</span></div><div class="r-total-row"><span>AUTH CODE 060861</span></div></div>
+      <div class="r-divider"></div>
+      <div class="r-thanks">THANK YOU FOR SHOPPING AT WALGREENS</div>
+      <div class="r-barcode"></div>
+      <div class="r-myw">myW</div>
+      <div class="r-savings">TOTAL SAVINGS $1.20</div>
+    </div>`;
+  }
+
+  function loadDemo() {
+    stopPolling(); clearStatus();
+    currentRaw = DEMO;
+    document.getElementById('filename').textContent = 'sample_receipt.png';
+    document.getElementById('pageInfo').textContent = 'Page 1 of 1';
+    document.getElementById('preview').innerHTML = demoReceiptHTML();
+    renderDemo(DEMO);
+  }
+
+  function renderDemo(d) {
+    const html =
+      '<div class="meta-bar">' +
+        '<span class="badge-ok">✓ Extracted</span>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          '<span class="tag">🧾 receipt</span>' +
+          '<button class="btn-csv" onclick="exportDemoCSV()">⬇ CSV</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="vendor-box">' +
+        '<div class="vendor-box-top">' +
+          '<div class="vendor-logo-cell"><div class="vendor-logo"><div class="vendor-logo-icon">W</div><span>' + escapeHtml(d.vendor.name) + '</span></div></div>' +
+          '<div class="vendor-meta-cell">' +
+            '<div class="vendor-meta-item"><div class="vendor-meta-label">Vendor Phone</div><div class="vendor-meta-value">' + escapeHtml(d.vendor.phone) + '</div></div>' +
+            '<div class="vendor-meta-item"><div class="vendor-meta-label">Vendor Type</div><div class="vendor-meta-value">' + escapeHtml(d.vendor.type) + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="vendor-row-2">' +
+          '<div class="vendor-cell"><div class="label">Receipt Date</div><div class="val">' + escapeHtml(d.receipt_date) + '</div></div>' +
+          '<div class="vendor-cell"><div class="label">Payment</div><div class="card-box"><div class="card-head"><div>Card Number</div><div>Name</div><div>Type</div></div><div class="card-body"><div>' + escapeHtml(d.payment.card_number) + '</div><div>' + escapeHtml(d.payment.name) + '</div><div>' + escapeHtml(d.payment.type) + '</div></div></div></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="section-title">☰ Line Items</div>' +
+      '<table class="line-table"><thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Type</th><th class="num">Quantity</th><th class="num">Price</th><th class="num">Total</th></tr></thead><tbody>' +
+        d.line_items.map((it, i) => '<tr><td class="idx">' + (i + 1) + '</td><td>' + escapeHtml(it.sku) + '</td><td>' + escapeHtml(it.item) + '</td><td>' + escapeHtml(it.type) + '</td><td class="num">' + it.quantity + '</td><td class="num">' + it.price.toFixed(2) + '</td><td class="num">' + it.total.toFixed(2) + '</td></tr>').join('') +
+      '</tbody></table>';
+    document.getElementById('resultsVisual').innerHTML = html;
+    document.getElementById('jsonContent').textContent = JSON.stringify(d, null, 2);
+  }
+
+  function exportDemoCSV() {
+    let csv = 'field,value,confidence\n';
+    for (const k in DEMO.fields) csv += '"' + k + '","' + DEMO.fields[k].value + '",' + DEMO.fields[k].confidence + '\n';
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'sample_extraction.csv';
+    a.click();
+  }
+
+  // ============================================================
+  // Upload flow
+  // ============================================================
+  function previewFile(file) {
+    const box = document.getElementById('preview');
+    document.getElementById('filename').textContent = file.name;
+    document.getElementById('pageInfo').textContent = 'Page 1 of 1';
+    const url = URL.createObjectURL(file);
+    box.innerHTML = '';
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img'); img.src = url; box.appendChild(img);
+    } else if (file.type === 'application/pdf') {
+      const frame = document.createElement('iframe'); frame.src = url; box.appendChild(frame);
+    } else {
+      box.innerHTML = '<div class="placeholder"><div class="big">📄</div>' + escapeHtml(file.name) + '</div>';
+    }
+  }
+
+  function normalizeDoc(d) {
+    if (!d) return { fields: {}, items: [], status: '', doc_type: null };
+    let fields = d.fields || d.extracted_fields || (d.extraction && d.extraction.fields) || {};
+    if (Array.isArray(fields)) {
+      const obj = {};
+      fields.forEach(f => {
+        const name = f.field_name || f.name;
+        if (!name) return;
+        const val = (f.normalized_value !== undefined && f.normalized_value !== null) ? f.normalized_value : f.raw_value;
+        if (val === null || val === undefined) return;
+        obj[name] = { value: val, confidence: f.confidence };
+      });
+      fields = obj;
+    } else if (fields && typeof fields === 'object') {
+      const obj = {};
+      for (const k in fields) {
+        const v = fields[k];
+        if (v && typeof v === 'object') {
+          if (v.value !== null && v.value !== undefined) obj[k] = { value: v.value, confidence: v.confidence };
+        } else if (v !== null && v !== undefined) {
+          obj[k] = { value: v, confidence: null };
+        }
+      }
+      fields = obj;
+    }
+    const items = d.line_items || d.items || d.transactions || (d.extraction && d.extraction.line_items) || [];
+    return { fields, items, status: (d.status || '').toLowerCase(), doc_type: d.document_type };
+  }
+
+  async function upload(file) {
+    stopPolling(); clearStatus(); currentRaw = null;
+    previewFile(file);
+    setStatus('⏳ Uploading ' + escapeHtml(file.name) + ' …<div class="progress"><div style="width:10%"></div></div>');
+    document.getElementById('resultsVisual').innerHTML =
+      '<div class="results-empty"><div class="big">⏳</div>Uploading…</div>';
+
+    pollStartTime = Date.now();
+    startVisualTimer();
+
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('files', file);
+    fd.append('document_type', docType);
+    fd.append('doc_type', docType);
+
+    try {
+      const res = await fetch('/api/v1/documents/', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + token },
+        body: fd
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+
+      const docId = data.document_id || data.id;
+      const norm = normalizeDoc(data);
+
+      if (Object.keys(norm.fields).length || norm.items.length) {
+        stopVisualTimer();
+        render(norm, data);
+        return;
+      }
+      stopVisualTimer();
+      if (docId) startPolling(docId);
+      else render(norm, data);
+    } catch (e) {
+      stopVisualTimer();
+      setStatus('❌ ' + escapeHtml(e.message), 'error');
+    }
+  }
+
+  let visualTimer = null;
+  function startVisualTimer() {
+    if (visualTimer) clearInterval(visualTimer);
+    visualTimer = setInterval(() => {
+      const elapsed = Math.round((Date.now() - pollStartTime) / 1000);
+      const pct = Math.min(90, 15 + elapsed * 3);
+      setStatus('🧠 AI processing… ' + elapsed + 's<div class="progress"><div style="width:' + pct + '%"></div></div>');
+    }, 800);
+  }
+  function stopVisualTimer() {
+    if (visualTimer) { clearInterval(visualTimer); visualTimer = null; }
+  }
+
+  function startPolling(id) {
+    let tries = 0;
+    const MAX = 400;
+    const tick = async () => {
+      tries++;
+      const d = await fetchDoc(id);
+      if (d) {
+        const norm = normalizeDoc(d);
+        if (Object.keys(norm.fields).length || norm.items.length) {
+          stopPolling(); render(norm, d); return;
+        }
+        if (norm.status === 'failed' || norm.status === 'error') {
+          stopPolling();
+          setStatus('❌ Processing failed: ' + (d.error || d.error_message || 'unknown'), 'error');
+          return;
+        }
+      }
+      if (tries >= MAX) {
+        stopPolling();
+        setStatus('⚠️ Timeout — check terminal', 'error');
+      }
+    };
+    tick();
+    pollTimer = setInterval(tick, 2000);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    stopVisualTimer();
+  }
+
+  async function fetchDoc(id) {
+    const urls = ['/api/v1/documents/' + id + '/extraction', '/api/v1/documents/' + id];
+    for (const u of urls) {
+      try {
+        const r = await fetch(u, { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const n = normalizeDoc(j);
+        if (Object.keys(n.fields).length || n.items.length) return j;
+      } catch (e) {}
+    }
+    try {
+      const r = await fetch('/api/v1/documents/' + id, { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) return await r.json();
+    } catch (e) {}
+    return null;
+  }
+
+  function render(norm, raw) {
+    currentRaw = raw || norm;
+    clearStatus();
+
+    const total = Object.keys(norm.fields).length;
+    let html = '';
+    if (!total) {
+      html = '<div class="results-empty"><div class="big">🤔</div>No fields were extracted</div>';
+    } else {
+      html = '<div class="meta-bar">' +
+        '<span class="badge-ok">✓ Extracted</span>' +
+        '<div style="display:flex;gap:8px;align-items:center;">' +
+          (norm.doc_type ? '<span class="tag">📄 ' + escapeHtml(norm.doc_type) + '</span>' : '') +
+          '<button class="btn-csv" onclick="exportCSV()">⬇ CSV</button>' +
+        '</div>' +
+      '</div>';
+      html += '<div class="field-grid" style="padding:0 20px 20px;">';
+      for (const k in norm.fields) {
+        const f = norm.fields[k];
+        const conf = f.confidence;
+        const confPct = conf !== null && conf !== undefined ? Math.round(conf * 100) + '%' : '';
+        const confCls = conf < 0.4 ? 'conf-low' : conf < 0.7 ? 'conf-med' : 'conf-high';
+        html += '<div class="field-card">' +
+          (confPct ? '<span class="field-conf ' + confCls + '">' + confPct + '</span>' : '') +
+          '<div class="field-label">' + escapeHtml(k.replace(/_/g, ' ')) + '</div>' +
+          '<div class="field-value">' + (f.value === null || f.value === undefined || f.value === '' ? '—' : escapeHtml(String(f.value))) + '</div>' +
+        '</div>';
+      }
+      html += '</div>';
+    }
+
+    document.getElementById('resultsVisual').innerHTML = html;
+    document.getElementById('jsonContent').textContent = JSON.stringify(currentRaw, null, 2);
+
+    if (currentTab === 'json') {
+      document.getElementById('resultsVisual').style.display = 'none';
+      document.getElementById('resultsJson').style.display = '';
+    }
+  }
+
+  function exportCSV() {
+    if (!currentRaw) return;
+    const norm = normalizeDoc(currentRaw);
+    let csv = 'field,value,confidence\n';
+    for (const k in norm.fields) {
+      const f = norm.fields[k];
+      csv += '"' + k.replace(/"/g,'""') + '","' + String(f.value ?? '').replace(/"/g,'""') + '",' + (f.confidence ?? '') + '\n';
+    }
+    const blob = new Blob([csv], { type:'text/csv' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'extraction.csv';
+    a.click();
+  }
+
+  // ============================================================
+  // AUTO-LOAD DEMO ON PAGE OPEN
+  // ============================================================
+  loadDemo();
+</script>
+</body>
+</html>

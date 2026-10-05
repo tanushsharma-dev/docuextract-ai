@@ -50,9 +50,12 @@
     </div>
     <div class="flex items-center gap-3">
       <a href="/ui/" class="text-xs px-4 py-2 rounded-full glass text-slate-300 hover:text-white transition">🤖 Extractor</a>
-      <span class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-glow"></span> Groq · Gemini · Neon
-      </span>
+      <a href="/ui/analytics" class="text-xs px-4 py-2 rounded-full glass text-slate-300 hover:text-white transition">📊 Analytics</a>
+      <div class="flex items-center gap-2 text-xs px-3 py-1.5 rounded-full glass text-slate-300">
+        <span id="userAvatar" class="w-5 h-5 rounded-full bg-gradient-to-br from-cyan-500 to-purple-500 flex items-center justify-center text-[9px] font-bold">U</span>
+        <span id="userName" class="hidden sm:inline">User</span>
+      </div>
+      <button onclick="Auth.logout()" class="text-xs px-3 py-1.5 rounded-full glass text-slate-400 hover:text-rose-400 transition">Logout</button>
     </div>
   </div>
 </nav>
@@ -114,7 +117,12 @@
   <div class="max-w-7xl mx-auto px-6 py-6 text-center text-xs text-slate-500">© 2026 Tanush Sharma · DocuExtract AI</div>
 </footer>
 
+<script src="auth.js"></script>
 <script>
+Auth.requireAuth();
+document.getElementById("userName").textContent = Auth.getName();
+document.getElementById("userAvatar").textContent = (Auth.getName()[0] || "U").toUpperCase();
+
 const API = "/api/v1";
 let current = null, currentMode = "view";
 
@@ -133,15 +141,13 @@ function chipHtml(status) {
 
 async function loadDocs() {
   try {
-    const res = await fetch(API + "/documents/");
+    const res = await Auth.fetchAuth(API + "/documents/");
     const data = await res.json();
     const docs = data.documents || [];
-
     document.getElementById("statTotal").textContent = docs.length;
     document.getElementById("statOk").textContent = docs.filter(d => d.status === "extracted" || d.status === "reviewed").length;
     document.getElementById("statRev").textContent = docs.filter(d => d.status === "needs_review").length;
     document.getElementById("statFail").textContent = docs.filter(d => d.status === "failed").length;
-
     const rows = document.getElementById("docRows");
     document.getElementById("emptyMsg").classList.toggle("hidden", docs.length > 0);
     rows.innerHTML = docs.map(d => `
@@ -162,17 +168,15 @@ async function loadDocs() {
 }
 
 async function openModal(id, mode) {
-  const res = await fetch(API + "/documents/" + id + "/extraction");
-  if (!res.ok) { alert("Extraction not available for this document."); return; }
+  const res = await Auth.fetchAuth(API + "/documents/" + id + "/extraction");
+  if (!res.ok) { alert("Extraction not available."); return; }
   current = await res.json();
   currentMode = mode;
-
   document.getElementById("modalTitle").textContent = "Document " + id.slice(0, 8);
   const chip = document.getElementById("modalChip");
   const c = CHIP[current.status] || CHIP.uploaded;
   chip.className = "text-[10px] px-2 py-0.5 rounded-full border " + c[1];
   chip.textContent = c[0];
-
   const body = document.getElementById("modalBody");
   const entries = Object.entries(current.fields || {});
   body.innerHTML = entries.map(([name, f]) => {
@@ -191,7 +195,6 @@ async function openModal(id, mode) {
         ${valueBox}
       </div>`;
   }).join("") || `<p class="text-sm text-slate-500 text-center py-8">No fields extracted.</p>`;
-
   const items = current.line_items || [];
   if (items.length) {
     const keys = Object.keys(items[0]);
@@ -206,7 +209,6 @@ async function openModal(id, mode) {
         </div>
       </div>`;
   }
-
   document.getElementById("approveBtn").classList.toggle("hidden", mode !== "review");
   document.getElementById("modal").classList.remove("hidden");
 }
@@ -220,31 +222,25 @@ async function saveReview() {
   if (!current) return;
   const corrections = {};
   document.querySelectorAll("[data-field]").forEach(el => corrections[el.dataset.field] = el.value);
-  const res = await fetch(API + "/reviews/" + current.document_id, {
+  const res = await Auth.fetchAuth(API + "/reviews/" + current.document_id, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       corrections: corrections,
       review_status: "approved",
-      reviewer_name: "Tanush Sharma",
+      reviewer_name: Auth.getName(),
       comments: "Reviewed via dashboard"
     })
   });
-  if (res.ok) {
-    closeModal();
-    loadDocs();
-  } else {
-    alert("Review save failed: " + res.status);
-  }
+  if (res.ok) { closeModal(); loadDocs(); }
+  else alert("Review save failed: " + res.status);
 }
 
 function exportCSV() {
   if (!current) return;
   const rows = [["Field", "Value", "Confidence", "Source"]];
-  Object.entries(current.fields || {}).forEach(([k, f]) =>
-    rows.push([k, f.value ?? "", f.confidence ?? "", f.source ?? ""]));
-  (current.line_items || []).forEach((it, i) =>
-    rows.push(["line_item_" + (i + 1), JSON.stringify(it), "", ""]));
+  Object.entries(current.fields || {}).forEach(([k, f]) => rows.push([k, f.value ?? "", f.confidence ?? "", f.source ?? ""]));
+  (current.line_items || []).forEach((it, i) => rows.push(["line_item_" + (i + 1), JSON.stringify(it), "", ""]));
   const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
@@ -253,7 +249,7 @@ function exportCSV() {
 }
 
 async function quickCSV(id) {
-  const res = await fetch(API + "/documents/" + id + "/extraction");
+  const res = await Auth.fetchAuth(API + "/documents/" + id + "/extraction");
   if (res.ok) { current = await res.json(); exportCSV(); }
 }
 

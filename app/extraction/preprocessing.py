@@ -1,52 +1,66 @@
 import os
 import logging
-
-import fitz
-import PIL.Image
+from typing import List, Tuple
 
 logger = logging.getLogger(__name__)
 
-MAX_DIM = 1568
+PDF_DPI = 120       # ⚡ aggressive
+MAX_WIDTH = 800     # ⚡ smaller
+MAX_PAGES = 1
 
 
-def is_pdf(path):
-    try:
-        with open(path, "rb") as f:
-            return f.read(5) == b"%PDF-"
-    except Exception:
-        return False
-
-
-def _resize(img):
-    w, h = img.size
-    scale = min(1.0, MAX_DIM / max(w, h))
-    if scale < 1.0:
-        img = img.resize((int(w * scale), int(h * scale)), PIL.Image.LANCZOS)
-    return img
-
-
-def preprocess_document(file_path, output_dir):
+def convert_pdf_to_images(pdf_path: str, output_dir: str) -> List[str]:
     os.makedirs(output_dir, exist_ok=True)
-    image_paths = []
+    image_paths: List[str] = []
+
     try:
-        if is_pdf(file_path):
-            doc = fitz.open(file_path)
-            for i, page in enumerate(doc):
-                pix = page.get_pixmap(dpi=150)
-                img = PIL.Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
-                img = _resize(img)
-                out = os.path.join(output_dir, f"page_{i + 1}.png")
-                img.save(out, "PNG")
-                image_paths.append(out)
-            doc.close()
-            logger.info(f"PDF rendered: {len(image_paths)} page(s)")
-        else:
-            img = PIL.Image.open(file_path).convert("RGB")
-            img = _resize(img)
-            out = os.path.join(output_dir, "page_1.png")
-            img.save(out, "PNG")
+        import pypdfium2 as pdfium
+        t0 = __import__('time').time()
+        pdf = pdfium.PdfDocument(pdf_path)
+        n_pages = len(pdf)
+        pages = min(n_pages, MAX_PAGES)
+        for i in range(pages):
+            page = pdf[i]
+            bitmap = page.render(scale=PDF_DPI / 72.0)
+            pil = bitmap.to_pil()
+            if pil.width > MAX_WIDTH:
+                ratio = MAX_WIDTH / pil.width
+                pil = pil.resize((MAX_WIDTH, int(pil.height * ratio)), resample=1)
+            out = os.path.join(output_dir, f"page_{i + 1}.png")
+            pil.convert("RGB").save(out, format="PNG", optimize=False)
             image_paths.append(out)
-            logger.info("Image preprocessed")
+        pdf.close()
+        logger.info(f"⏱️ PDF convert: {__import__('time').time()-t0:.1f}s ({pages}/{n_pages} pages)")
+        return image_paths
     except Exception as e:
-        logger.error(f"Preprocessing failed: {e}")
-    return image_paths
+        logger.warning(f"pypdfium2 failed: {e}")
+
+    try:
+        from pdf2image import convert_from_path
+        images = convert_from_path(pdf_path, dpi=PDF_DPI, first_page=1, last_page=MAX_PAGES)
+        for i, img in enumerate(images):
+            if img.width > MAX_WIDTH:
+                ratio = MAX_WIDTH / img.width
+                img = img.resize((MAX_WIDTH, int(img.height * ratio)))
+            out = os.path.join(output_dir, f"page_{i + 1}.png")
+            img.convert("RGB").save(out, format="PNG", optimize=False)
+            image_paths.append(out)
+        return image_paths
+    except Exception as e:
+        logger.error(f"PDF conversion failed: {e}")
+        return []
+
+
+def preprocess_document(input_path: str, output_dir: str) -> Tuple[str, List[str]]:
+    os.makedirs(output_dir, exist_ok=True)
+    ext = os.path.splitext(input_path)[1].lower()
+    if ext == ".pdf":
+        return "pdf", convert_pdf_to_images(input_path, output_dir)
+    elif ext in (".png", ".jpg", ".jpeg", ".webp", ".tiff"):
+        return "image", [input_path]
+    logger.error(f"Unsupported: {ext}")
+    return "unknown", []
+
+
+def extract_text_from_image(image_path: str) -> str:
+    return ""
