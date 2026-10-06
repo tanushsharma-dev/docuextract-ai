@@ -10,12 +10,12 @@ logger = logging.getLogger(__name__)
 
 SUPPORTED_TYPES = ["invoice", "receipt", "bank_statement", "id_card", "form"]
 
-# ✅ Better model + fallback
-GROQ_TEXT_MODEL = "openai/gpt-oss-120b"      # primary (better extraction)
-GROQ_FALLBACK_MODEL = "openai/gpt-oss-20b"   # fallback (faster)
+# ✅ FAST model primary, bigger fallback
+GROQ_TEXT_MODEL = "openai/gpt-oss-20b"       # fast
+GROQ_FALLBACK_MODEL = "openai/gpt-oss-120b"  # slower but smarter fallback
 
-REQUEST_TIMEOUT = 45
-MAX_TOKENS = 4096          # ✅ increased for full extraction
+REQUEST_TIMEOUT = 30
+MAX_TOKENS = 2048
 MAX_PAGES_TO_PROCESS = 1
 
 _ocr_engine = None
@@ -48,59 +48,48 @@ def _groq_client():
 
 
 # ==========================================================
-# ✅ DETAILED PROMPT — saare fields maango
+# SHORTER PROMPT (faster) but still asks for spelling fix
 # ==========================================================
 def _build_prompt(text: str, document_type: str) -> str:
     type_hint = document_type if document_type and document_type != "auto" else "auto-detect"
-    
-    return f"""You are a document data extraction expert. Extract ALL structured data from this {type_hint} document.
 
-OCR TEXT:
+    return f"""Extract structured data from this {type_hint} document.
+
+OCR text (may have typos):
 ---
-{text[:8000]}
+{text[:6000]}
 ---
 
-Return ONLY valid JSON in this EXACT format (no markdown, no explanation):
+Fix obvious OCR typos in addresses/cities (e.g., "Kamataka" → "Karnataka", "Wllage" → "Village").
+Do NOT invent data.
 
+Return ONLY JSON:
 {{
   "document_type": "invoice|receipt|bank_statement|id_card|form",
   "fields": {{
-    "invoice_number": {{"value": "exact value from document", "confidence": 0.95}},
-    "invoice_date": {{"value": "date string", "confidence": 0.95}},
-    "due_date": {{"value": "...", "confidence": 0.95}},
+    "invoice_number": {{"value": "...", "confidence": 0.95}},
+    "invoice_date": {{"value": "...", "confidence": 0.95}},
     "order_id": {{"value": "...", "confidence": 0.95}},
     "seller_name": {{"value": "...", "confidence": 0.95}},
     "seller_address": {{"value": "...", "confidence": 0.9}},
     "seller_gstin": {{"value": "...", "confidence": 0.95}},
     "buyer_name": {{"value": "...", "confidence": 0.95}},
     "buyer_address": {{"value": "...", "confidence": 0.9}},
-    "buyer_gstin": {{"value": "...", "confidence": 0.9}},
     "subtotal": {{"value": "...", "confidence": 0.95}},
     "tax": {{"value": "...", "confidence": 0.95}},
     "total": {{"value": "...", "confidence": 0.95}},
-    "currency": {{"value": "INR|USD|EUR", "confidence": 0.95}},
-    "payment_status": {{"value": "...", "confidence": 0.9}},
-    "payment_method": {{"value": "...", "confidence": 0.9}}
+    "currency": {{"value": "INR", "confidence": 0.95}}
   }},
   "line_items": [
-    {{"description": "item name", "quantity": 1, "unit_price": 0.0, "amount": 0.0}}
+    {{"description": "...", "quantity": 0, "unit_price": 0, "amount": 0}}
   ]
 }}
 
-CRITICAL RULES:
-1. Extract EVERY field you can find - do not skip any.
-2. For each field, give exact value from the document.
-3. For line items table - extract ALL rows (Description, Qty, Price, Amount).
-4. Confidence: 0.95 = definitely correct, 0.7 = probably, 0.5 = uncertain.
-5. If a field is not visible, OMIT it (do not include with "null").
-6. Output RAW JSON only — no ```json fences, no explanation.
-7. The document currency appears to be INR (based on ₹ symbol).
-"""
+No markdown. Raw JSON only."""
 
 
 def _extract_json(raw: str) -> dict:
     raw = raw.strip()
-    # Strip markdown fences if any
     if raw.startswith("```"):
         parts = raw.split("```")
         if len(parts) >= 2:
@@ -108,7 +97,6 @@ def _extract_json(raw: str) -> dict:
             if raw.startswith("json"):
                 raw = raw[4:]
             raw = raw.strip()
-    # Find JSON boundaries
     start, end = raw.find("{"), raw.rfind("}")
     if start >= 0 and end > start:
         raw = raw[start:end + 1]
@@ -124,7 +112,7 @@ def _call_groq_text(prompt: str) -> str:
             resp = client.chat.completions.create(
                 model=model,
                 messages=[
-                    {"role": "system", "content": "You are a precise data extraction engine. You output only valid JSON. You extract every field present in documents."},
+                    {"role": "system", "content": "Extract JSON only. Fix OCR typos."},
                     {"role": "user", "content": prompt},
                 ],
                 temperature=0.1,
@@ -163,7 +151,6 @@ def _process_single_page(image_path: str, document_type: str, page_num: int,
         parsed = _extract_json(raw)
         parsed["_page"] = page_num
 
-        # Log fields count
         n_fields = len(parsed.get("fields", {}))
         n_items = len(parsed.get("line_items", []))
         logger.info(f"Page {page_num}/{total_pages} ✓ OCR {t_ocr:.1f}s + LLM {t_llm:.1f}s = {t_ocr+t_llm:.1f}s | {n_fields} fields, {n_items} items")

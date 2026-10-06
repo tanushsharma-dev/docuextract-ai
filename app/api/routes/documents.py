@@ -1,4 +1,4 @@
-import os
+﻿import os
 import shutil
 import logging
 from uuid import UUID, uuid4
@@ -8,23 +8,31 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
-from app.models import Document, ExtractedField, LineItem
+from app.models import Document, ExtractedField, LineItem, User
+from app.api.routes.auth import get_current_user
 from app.services.queue import enqueue_extraction_job
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-ALLOWED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/jpg", "image/webp", "image/tiff"]
+ALLOWED_TYPES = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/tiff",
+]
 
 
 @router.post("/")
 def upload_document(
     file: UploadFile = File(...),
     document_type: str = Form("auto"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """Sync endpoint = FastAPI threadpool me chalta hai → event-loop free → site fast."""
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
 
@@ -39,7 +47,8 @@ def upload_document(
         filename=file.filename,
         mime_type=file.content_type,
         storage_path=storage_path,
-        status="uploaded"
+        status="uploaded",
+        user_id=current_user.id,
     )
     db.add(doc)
     db.commit()
@@ -50,13 +59,22 @@ def upload_document(
     return {
         "document_id": str(doc.id),
         "status": "uploaded",
-        "message": "Document received. Processing started."
+        "message": "Document received. Processing started.",
     }
 
 
 @router.get("/")
-def list_documents(db: Session = Depends(get_db)):
-    docs = db.query(Document).order_by(Document.created_at.desc()).limit(50).all()
+def list_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    docs = (
+        db.query(Document)
+        .filter(Document.user_id == current_user.id)
+        .order_by(Document.created_at.desc())
+        .limit(50)
+        .all()
+    )
     return {
         "documents": [
             {
@@ -64,7 +82,7 @@ def list_documents(db: Session = Depends(get_db)):
                 "filename": d.filename,
                 "status": d.status,
                 "document_type": d.document_type,
-                "created_at": str(d.created_at)
+                "created_at": str(d.created_at),
             }
             for d in docs
         ]
@@ -72,8 +90,16 @@ def list_documents(db: Session = Depends(get_db)):
 
 
 @router.get("/{document_id}")
-def get_document(document_id: UUID, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+def get_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == current_user.id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
     return {
@@ -82,13 +108,21 @@ def get_document(document_id: UUID, db: Session = Depends(get_db)):
         "status": doc.status,
         "document_type": doc.document_type,
         "page_count": doc.page_count,
-        "created_at": str(doc.created_at)
+        "created_at": str(doc.created_at),
     }
 
 
 @router.get("/{document_id}/extraction")
-def get_extraction(document_id: UUID, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+def get_extraction(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == current_user.id)
+        .first()
+    )
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -104,7 +138,7 @@ def get_extraction(document_id: UUID, db: Session = Depends(get_db)):
                 "value": f.normalized_value,
                 "confidence": f.confidence,
                 "source": f.source,
-                "requires_review": f.requires_review
+                "requires_review": f.requires_review,
             }
             for f in fields
         },
@@ -113,8 +147,8 @@ def get_extraction(document_id: UUID, db: Session = Depends(get_db)):
                 "description": i.description,
                 "quantity": i.quantity,
                 "unit_price": i.unit_price,
-                "amount": i.amount
+                "amount": i.amount,
             }
             for i in items
-        ]
+        ],
     }

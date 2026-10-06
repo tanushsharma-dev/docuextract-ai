@@ -14,38 +14,109 @@ def generate_otp() -> str:
 
 
 def send_otp_email(to_email: str, otp: str) -> bool:
-    """Professional HTML email ke saath OTP bhejo."""
+    """Professional HTML email with OTP."""
     try:
+        # ====== SETTINGS ======
+        sender_email = settings.SMTP_USER
+        sender_pass = settings.SMTP_PASS
+
+        if not sender_email or not sender_pass:
+            logger.error("SMTP_USER or SMTP_PASS not set in .env")
+            return False
+
+        # Clean password — remove spaces (Gmail app passwords often have spaces)
+        sender_pass = sender_pass.replace(" ", "")
+
+        # ====== BUILD MESSAGE ======
         msg = MIMEMultipart("alternative")
-        msg["From"] = f"DocuExtract AI <{settings.SMTP_USER}>"
+        msg["From"] = f"DocuExtract AI <{sender_email}>"
         msg["To"] = to_email
-        msg["Subject"] = "🔐 DocuExtract AI — Email Verification Code"
+        msg["Subject"] = "🔐 Your DocuExtract AI Verification Code"
 
-        html = f"""
-        <div style="font-family:Arial,sans-serif;max-width:520px;margin:auto;background:#0f172a;color:#e2e8f0;border-radius:16px;overflow:hidden">
-          <div style="background:linear-gradient(135deg,#06b6d4,#a855f7);padding:24px;text-align:center">
-            <h1 style="margin:0;color:#fff;font-size:22px">📄 DocuExtract AI</h1>
-            <p style="margin:4px 0 0;color:#e0f2fe;font-size:13px">Document Intelligence Platform</p>
-          </div>
-          <div style="padding:32px;text-align:center">
-            <p style="font-size:15px">Aapka verification code:</p>
-            <div style="font-size:34px;font-weight:bold;letter-spacing:8px;color:#22d3ee;background:#1e293b;border:1px dashed #334155;border-radius:12px;padding:16px;margin:20px 0">{otp}</div>
-            <p style="font-size:13px;color:#94a3b8">Ye code <b>10 minute</b> tak valid hai.<br>Agar aapne signup nahi kiya, toh is email ko ignore karein.</p>
-          </div>
-          <div style="padding:16px;text-align:center;font-size:11px;color:#64748b;border-top:1px solid #1e293b">
-            © 2026 DocuExtract AI — Secure Document Processing
-          </div>
-        </div>
-        """
-        msg.attach(MIMEText(html, "html"))
+        # Plain text fallback
+        text_body = (
+            f"DocuExtract AI\n"
+            f"Your verification code is: {otp}\n\n"
+            f"This code expires in 10 minutes.\n"
+            f"If you didn't request this, ignore this email."
+        )
 
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=15) as server:
-            server.login(settings.SMTP_USER, settings.SMTP_PASS)
-            server.send_message(msg)
+        # HTML body
+        html_body = f"""
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"></head>
+<body style="margin:0;padding:0;background:#0b1220;font-family:'Segoe UI',Arial,sans-serif;">
+  <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#0b1220;padding:40px 20px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="520" style="max-width:520px;background:#0f172a;border-radius:16px;border:1px solid rgba(148,163,184,.15);overflow:hidden;">
 
-        logger.info(f"OTP email sent to {to_email}")
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#06b6d4,#8b5cf6);padding:28px;text-align:center;">
+              <div style="font-size:26px;font-weight:800;color:#ffffff;letter-spacing:-.02em;">📄 DocuExtract AI</div>
+              <div style="font-size:11px;color:rgba(255,255,255,.75);letter-spacing:.25em;margin-top:6px;text-transform:uppercase;">Document Intelligence</div>
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:36px 32px 24px;">
+              <h1 style="margin:0 0 12px;font-size:22px;font-weight:700;color:#e2e8f0;letter-spacing:-.01em;">Verify your email</h1>
+              <p style="margin:0 0 24px;font-size:14px;line-height:1.6;color:#94a3b8;">
+                Enter the code below to complete your signup. This code is valid for <strong style="color:#e2e8f0;">10 minutes</strong>.
+              </p>
+
+              <!-- OTP Code Box -->
+              <div style="background:rgba(34,211,238,.08);border:1px solid rgba(34,211,238,.3);border-radius:12px;padding:24px 20px;text-align:center;margin-bottom:24px;">
+                <div style="font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:#22d3ee;font-weight:600;margin-bottom:10px;">Your verification code</div>
+                <div style="font-size:38px;font-weight:800;letter-spacing:.3em;color:#ffffff;font-family:'Courier New',monospace;">{otp}</div>
+              </div>
+
+              <p style="margin:0;font-size:12px;line-height:1.6;color:#64748b;">
+                If you didn't request this, you can safely ignore this email.
+              </p>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td style="padding:20px 32px 28px;border-top:1px solid rgba(148,163,184,.1);">
+              <div style="font-size:11px;line-height:1.6;color:#475569;text-align:center;">
+                © 2026 DocuExtract AI · Built by Tanush Sharma<br>
+                This is an automated message — please do not reply.
+              </div>
+            </td>
+          </tr>
+
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+"""
+
+        msg.attach(MIMEText(text_body, "plain"))
+        msg.attach(MIMEText(html_body, "html"))
+
+        # ====== SEND ======
+        logger.info(f"Sending OTP email from {sender_email} to {to_email}")
+        with smtplib.SMTP("smtp.gmail.com", 587, timeout=15) as server:
+            server.starttls()
+            server.login(sender_email, sender_pass)
+            server.sendmail(sender_email, to_email, msg.as_string())
+
+        logger.info(f"OTP email sent successfully to {to_email}")
         return True
 
+    except smtplib.SMTPAuthenticationError as e:
+        logger.error(f"SMTP auth failed — check SMTP_USER / SMTP_PASS: {e}")
+        return False
+    except smtplib.SMTPException as e:
+        logger.error(f"SMTP error while sending to {to_email}: {e}")
+        return False
     except Exception as e:
-        logger.error(f"Email send failed: {e}")
+        logger.error(f"Failed to send OTP email to {to_email}: {type(e).__name__}: {e}")
         return False

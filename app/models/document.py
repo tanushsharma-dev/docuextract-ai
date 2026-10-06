@@ -1,101 +1,156 @@
-import uuid
-from datetime import datetime
-from sqlalchemy import Column, String, Integer, Text, DateTime, Boolean, Float, ForeignKey, JSON, Uuid
-from sqlalchemy.orm import relationship
-from app.core.database import Base
+import os
+import shutil
+import logging
+from uuid import UUID, uuid4
 
-class Document(Base):
-    __tablename__ = "documents"
+from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from sqlalchemy.orm import Session
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    filename = Column(Text, nullable=False)
-    mime_type = Column(String(50))
-    sha256_hash = Column(String(64))
-    storage_path = Column(Text, nullable=False)
-    page_count = Column(Integer, default=1)
-    document_type = Column(String(50))
-    status = Column(String(30), default="uploaded")
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+from app.core.config import settings
+from app.core.database import get_db
+from app.models import Document, ExtractedField, LineItem, User
+from app.api.routes.auth import get_current_user
+from app.services.queue import enqueue_extraction_job
 
-    pages = relationship("Page", back_populates="document", cascade="all, delete-orphan")
-    extraction_jobs = relationship("ExtractionJob", back_populates="document", cascade="all, delete-orphan")
-    extracted_fields = relationship("ExtractedField", back_populates="document", cascade="all, delete-orphan")
-    line_items = relationship("LineItem", back_populates="document", cascade="all, delete-orphan")
-    human_reviews = relationship("HumanReview", back_populates="document", cascade="all, delete-orphan")
+logger = logging.getLogger(__name__)
 
-class Page(Base):
-    __tablename__ = "pages"
+router = APIRouter()
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
-    page_number = Column(Integer, nullable=False)
-    image_path = Column(Text)
-    width = Column(Integer)
-    height = Column(Integer)
+ALLOWED_TYPES = [
+    "application/pdf",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/tiff",
+]
 
-    document = relationship("Document", back_populates="pages")
 
-class ExtractionJob(Base):
-    __tablename__ = "extraction_jobs"
+@router.post("/")
+def upload_document(
+    file: UploadFile = File(...),
+    document_type: str = Form("auto"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Upload endpoint — sync mode me process hota hai."""
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=400, detail=f"Invalid file type: {file.content_type}")
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
-    status = Column(String(30), default="pending")
-    model_version = Column(String(50))
-    ocr_engine = Column(String(50))
-    vlm_model = Column(String(50))
-    started_at = Column(DateTime)
-    completed_at = Column(DateTime)
-    error_message = Column(Text)
+    upload_dir = os.path.join(settings.STORAGE_PATH, "uploads")
+    os.makedirs(upload_dir, exist_ok=True)
+    storage_path = os.path.join(upload_dir, f"{uuid4()}_{file.filename}")
 
-    document = relationship("Document", back_populates="extraction_jobs")
+    with open(storage_path, "wb") as out:
+        shutil.copyfileobj(file.file, out)
 
-class ExtractedField(Base):
-    __tablename__ = "extracted_fields"
+    doc = Document(
+        filename=file.filename,
+        mime_type=file.content_type,
+        storage_path=storage_path,
+        status="uploaded",
+        user_id=current_user.id,
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
-    job_id = Column(Uuid, ForeignKey("extraction_jobs.id"))
-    field_name = Column(String(100), nullable=False)
-    raw_value = Column(Text)
-    normalized_value = Column(Text)
-    confidence = Column(Float, default=0.0)
-    source = Column(String(50))
-    page_number = Column(Integer)
-    bbox = Column(JSON)
-    validation_status = Column(String(30))
-    requires_review = Column(Boolean, default=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    enqueue_extraction_job(str(doc.id), document_type)
 
-    document = relationship("Document", back_populates="extracted_fields")
+    return {
+        "document_id": str(doc.id),
+        "status": "uploaded",
+        "message": "Document received. Processing started.",
+    }
 
-class LineItem(Base):
-    __tablename__ = "line_items"
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
-    description = Column(Text)
-    quantity = Column(Float)
-    unit_price = Column(Float)
-    amount = Column(Float)
-    confidence = Column(Float, default=0.0)
-    page_number = Column(Integer)
-    created_at = Column(DateTime, default=datetime.utcnow)
+@router.get("/")
+def list_documents(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List ONLY current user's documents."""
+    docs = (
+        db.query(Document)
+        .filter(Document.user_id == current_user.id)
+        .order_by(Document.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    return {
+        "documents": [
+            {
+                "document_id": str(d.id),
+                "filename": d.filename,
+                "status": d.status,
+                "document_type": d.document_type,
+                "created_at": str(d.created_at),
+            }
+            for d in docs
+        ]
+    }
 
-    document = relationship("Document", back_populates="line_items")
 
-class HumanReview(Base):
-    __tablename__ = "human_reviews"
+@router.get("/{document_id}")
+def get_document(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == current_user.id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {
+        "document_id": str(doc.id),
+        "filename": doc.filename,
+        "status": doc.status,
+        "document_type": doc.document_type,
+        "page_count": doc.page_count,
+        "created_at": str(doc.created_at),
+    }
 
-    id = Column(Uuid, primary_key=True, default=uuid.uuid4)
-    document_id = Column(Uuid, ForeignKey("documents.id"), nullable=False)
-    field_name = Column(String(100), nullable=False)
-    original_value = Column(Text)
-    corrected_value = Column(Text)
-    reviewer_name = Column(String(100))
-    review_status = Column(String(30), default="pending")
-    comments = Column(Text)
-    created_at = Column(DateTime, default=datetime.utcnow)
 
-    document = relationship("Document", back_populates="human_reviews")
+@router.get("/{document_id}/extraction")
+def get_extraction(
+    document_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    doc = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == current_user.id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    fields = db.query(ExtractedField).filter(ExtractedField.document_id == doc.id).all()
+    items = db.query(LineItem).filter(LineItem.document_id == doc.id).all()
+
+    return {
+        "document_id": str(doc.id),
+        "status": doc.status,
+        "document_type": doc.document_type,
+        "fields": {
+            f.field_name: {
+                "value": f.normalized_value,
+                "confidence": f.confidence,
+                "source": f.source,
+                "requires_review": f.requires_review,
+            }
+            for f in fields
+        },
+        "line_items": [
+            {
+                "description": i.description,
+                "quantity": i.quantity,
+                "unit_price": i.unit_price,
+                "amount": i.amount,
+            }
+            for i in items
+        ],
+    }
