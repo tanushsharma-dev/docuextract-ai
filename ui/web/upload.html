@@ -27,7 +27,8 @@
     padding:9px 16px; border-radius:22px;
     border:1px solid rgba(148,163,184,.15);
     background:rgba(15,23,42,.6); cursor:pointer;
-    font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
+    font-family:inherit; display:inline-flex; align-items:center; gap:6px;
+    transition:.2s; }
   .nav a:hover { color:#22d3ee; border-color:rgba(34,211,238,.4); }
   .nav .user { display:flex; align-items:center; gap:8px; padding-left:6px; }
   .nav .avatar { width:26px; height:26px; border-radius:50%;
@@ -155,57 +156,8 @@
     padding:5px 12px; border-radius:999px; }
   .btn-csv { font-size:12px; color:#22d3ee; background:rgba(34,211,238,.1);
     border:1px solid rgba(34,211,238,.3); padding:5px 12px; border-radius:999px;
-    cursor:pointer; font-family:inherit; }
+    cursor:pointer; font-family:inherit; transition:.2s; }
   .btn-csv:hover { background:rgba(34,211,238,.2); }
-
-  /* Vendor demo card */
-  .vendor-box { margin:0 20px 16px; background:rgba(15,23,42,.65);
-    border:1px solid rgba(148,163,184,.12); border-radius:14px; overflow:hidden; }
-  .vendor-box-top { display:grid; grid-template-columns:1fr 1fr;
-    border-bottom:1px solid rgba(148,163,184,.1); }
-  .vendor-logo-cell { display:flex; align-items:center; justify-content:center;
-    padding:22px; border-right:1px solid rgba(148,163,184,.1); }
-  .vendor-logo { font-size:32px; font-weight:800; color:#fff; letter-spacing:-.02em;
-    display:flex; align-items:center; gap:10px; }
-  .vendor-logo-icon { width:42px; height:42px; border-radius:50%; background:#ef4444;
-    display:grid; place-items:center; color:#fff; font-size:22px; font-weight:800; }
-  .vendor-meta-cell { display:grid; grid-template-columns:1fr 1fr; }
-  .vendor-meta-item { padding:16px 18px; border-right:1px solid rgba(148,163,184,.1);
-    border-bottom:1px solid rgba(148,163,184,.1); }
-  .vendor-meta-item:nth-child(2n) { border-right:none; }
-  .vendor-meta-item:nth-child(3), .vendor-meta-item:nth-child(4) { border-bottom:none; }
-  .vendor-meta-label { font-size:10px; letter-spacing:.15em; text-transform:uppercase;
-    color:#64748b; font-weight:600; margin-bottom:6px; }
-  .vendor-meta-value { font-size:14px; font-weight:600; color:#e2e8f0; line-height:1.35;
-    word-break:break-word; }
-  .vendor-row-2 { display:grid; grid-template-columns:1fr 1fr; }
-  .vendor-cell { padding:16px 18px; border-right:1px solid rgba(148,163,184,.1); }
-  .vendor-cell:last-child { border-right:none; }
-  .vendor-cell .label { font-size:10px; letter-spacing:.15em; text-transform:uppercase;
-    color:#64748b; font-weight:600; margin-bottom:8px; }
-  .vendor-cell .val { font-size:14px; font-weight:600; color:#e2e8f0; }
-  .card-box { border:1px solid rgba(148,163,184,.12); border-radius:8px;
-    overflow:hidden; margin-top:8px; }
-  .card-head { display:grid; grid-template-columns:1fr 1fr 1fr;
-    background:rgba(15,23,42,.5); font-size:10px; letter-spacing:.1em;
-    text-transform:uppercase; color:#64748b; font-weight:600; }
-  .card-head > div { padding:6px 10px; border-right:1px solid rgba(148,163,184,.1); }
-  .card-head > div:last-child { border-right:none; }
-  .card-body { display:grid; grid-template-columns:1fr 1fr 1fr; font-size:13px;
-    color:#e2e8f0; font-weight:500; }
-  .card-body > div { padding:8px 10px; border-right:1px solid rgba(148,163,184,.1); }
-  .card-body > div:last-child { border-right:none; }
-
-  .section-title { display:flex; align-items:center; gap:8px; font-size:15px;
-    font-weight:700; color:#e2e8f0; padding:12px 20px 8px; }
-  .line-table { width:100%; border-collapse:collapse; font-size:13px; margin:0 0 20px; }
-  .line-table th { text-align:left; padding:10px 14px; font-size:10px;
-    letter-spacing:.12em; text-transform:uppercase; color:#64748b; font-weight:600;
-    border-bottom:1px solid rgba(148,163,184,.15); }
-  .line-table th.num, .line-table td.num { text-align:right; }
-  .line-table td { padding:12px 14px; color:#e2e8f0;
-    border-bottom:1px solid rgba(148,163,184,.08); font-weight:500; }
-  .line-table .idx { color:#64748b; font-weight:600; }
 
   .status-bar { padding:12px 20px; font-size:13px; color:#22d3ee; }
   .status-bar.error { color:#f87171; }
@@ -217,9 +169,6 @@
   .json-view { padding:20px; font-family:'JetBrains Mono','Consolas',monospace;
     font-size:12px; color:#94a3b8; white-space:pre-wrap; word-break:break-word; }
 
-  /* ============================================================
-     ENHANCED FOOTER
-     ============================================================ */
   .site-footer {
     max-width:1400px; margin:40px auto 0; padding:24px 40px 32px;
     border-top:1px solid rgba(148,163,184,.12);
@@ -241,12 +190,8 @@
     display:inline-block; }
   .footer-links { display:flex; gap:18px; align-items:center; }
   .footer-links a { color:#64748b; text-decoration:none; font-size:13px;
-    font-weight:500; transition:color .2s; position:relative; }
+    font-weight:500; transition:color .2s; }
   .footer-links a:hover { color:#22d3ee; }
-  .footer-links a::after { content:''; position:absolute; bottom:-3px; left:0; right:0;
-    height:1px; background:linear-gradient(90deg,#22d3ee,#8b5cf6);
-    transform:scaleX(0); transform-origin:left; transition:transform .25s; }
-  .footer-links a:hover::after { transform:scaleX(1); }
   .footer-copy { color:#475569; font-size:11px; letter-spacing:.04em; }
 
   @media (max-width:900px) {
@@ -256,8 +201,6 @@
     .field-grid { grid-template-columns:1fr; }
     .site-footer { flex-direction:column; text-align:center; }
     .footer-links { justify-content:center; }
-    .vendor-box-top { grid-template-columns:1fr; }
-    .vendor-logo-cell { border-right:none; border-bottom:1px solid rgba(148,163,184,.1); }
   }
 </style>
 </head>
@@ -380,14 +323,6 @@
       p.classList.add('active');
       docType = p.dataset.type;
       if (docType === 'auto') loadDemo();
-      else {
-        document.getElementById('preview').innerHTML =
-          '<div class="placeholder"><div class="big">📄</div>Upload a document to see preview</div>';
-        document.getElementById('filename').textContent = 'No document';
-        document.getElementById('pageInfo').textContent = '—';
-        document.getElementById('resultsVisual').innerHTML =
-          '<div class="results-empty"><div class="big">✨</div>Extracted fields will appear here</div>';
-      }
     };
   });
 
@@ -428,117 +363,6 @@
     return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  // ============================================================
-  // DEMO: Walgreens Receipt
-  // ============================================================
-  const DEMO = {
-    document_id: "demo-sample-001",
-    status: "extracted",
-    document_type: "receipt",
-    vendor: { name: "Walgreens", phone: "650-342-2723",
-      type: "drugstores, convenience stores, cosmetics & beauty supply" },
-    receipt_date: "March 28, 2023, 1:10 pm",
-    payment: { card_number: "1850", name: "Visa ***1850", type: "visa" },
-    fields: {
-      vendor_name: { value: "Walgreens", confidence: 0.98 },
-      vendor_phone: { value: "650-342-2723", confidence: 0.94 },
-      vendor_type: { value: "drugstores, convenience stores, cosmetics & beauty supply", confidence: 0.85 },
-      receipt_date: { value: "March 28, 2023, 1:10 pm", confidence: 0.96 },
-      payment_card: { value: "Visa ***1850", confidence: 0.92 },
-      payment_type: { value: "visa", confidence: 0.94 },
-      subtotal: { value: "27.60", confidence: 0.95 },
-      sales_tax: { value: "1.83", confidence: 0.95 },
-      total: { value: "29.43", confidence: 0.97 },
-    },
-    line_items: [
-      { sku: "61126943157", item: "RED BULL ENRGY DRK CNS 8.4OZ 6PK", type: "food", quantity: 1, price: 9.99, total: 8.79 },
-      { sku: "00000007211", item: "CA REDMP VAL", type: "fee", quantity: 1, price: 0.00, total: 0.30 },
-      { sku: "04100000749", item: "NAB OREO CKTS C/P 5.25OZ WMS", type: "food", quantity: 1, price: 2.69, total: 2.69 },
-      { sku: "02840003205", item: "DORITOS NACHO CHEESE", type: "food", quantity: 1, price: 2.00, total: 2.00 },
-      { sku: "02100001315", item: "F/LAYS REGULAR 2.63OZ", type: "food", quantity: 1, price: 2.00, total: 2.00 },
-      { sku: "03760010022", item: "SCOTCH BRITE 6/PAD KITCHEN SPONGE", type: "household", quantity: 1, price: 4.79, total: 4.79 },
-      { sku: "01650058637", item: "PALMOLIVE DISH POWER", type: "household", quantity: 1, price: 1.49, total: 1.49 },
-      { sku: "02100000581", item: "SHIPPING BAG FEE", type: "fee", quantity: 1, price: 0.25, total: 0.25 },
-    ],
-  };
-
-  function demoReceiptHTML() {
-    return `<div class="receipt-paper">
-      <div class="r-logo">Walgreens</div>
-      <div class="r-addr">02296 191 E 3RD AVE<br>SAN MATEO, CA 94401<br>650-342-2723</div>
-      <div class="r-meta">117 &nbsp; 4782 &nbsp; 0022 &nbsp; 03/28/2023 &nbsp; 1:10 PM</div>
-      <div class="r-divider"></div>
-      <div class="r-item"><div class="r-item-name">RED BULL ENRGY DRK CNS 8.4OZ 6PK</div><div class="r-item-row"><span>61126943157</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 9.99</span></div><div class="r-item-row"><span>MYWALGREENS SAVINGS 1.20</span><span>8.79 SALE</span></div></div>
-      <div class="r-item"><div class="r-item-name">CA REDMP VAL</div><div class="r-item-row"><span>00000007211</span><span>0.30</span></div></div>
-      <div class="r-item"><div class="r-item-name">NAB OREO CKTS C/P 5.25OZ WMS</div><div class="r-item-row"><span>04400000749</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 2.69</span><span>2.69</span></div></div>
-      <div class="r-item"><div class="r-item-name">DORITOS NACHO CHEESE</div><div class="r-item-row"><span>02840003205</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>
-      <div class="r-item"><div class="r-item-name">F/LAYS REGULAR 2.63OZ</div><div class="r-item-row"><span>02100001315</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>
-      <div class="r-item"><div class="r-item-name">SCOTCH BRITE 6/PAD KITCHEN SPONGE</div><div class="r-item-row"><span>03760010022</span><span>A</span></div><div class="r-item-row"><span>4.79</span></div></div>
-      <div class="r-item"><div class="r-item-name">PALMOLIVE DISH POWER</div><div class="r-item-row"><span>01650058637</span><span>A</span></div><div class="r-item-row"><span>1.49</span></div></div>
-      <div class="r-item"><div class="r-item-name">SHIPPING BAG FEE</div><div class="r-item-row"><span>02100000581</span><span>0.25</span></div></div>
-      <div class="r-divider"></div>
-      <div class="r-totals"><div class="r-total-row"><span>SUBTOTAL</span><span>27.60</span></div><div class="r-total-row"><span>SALES TAX 6.50%</span><span>1.83</span></div><div class="r-total-row r-grand"><span>TOTAL</span><span>29.43</span></div></div>
-      <div class="r-totals"><div class="r-total-row"><span>VISA ACCT 1850</span><span>29.43</span></div><div class="r-total-row"><span>AUTH CODE 060861</span></div></div>
-      <div class="r-divider"></div>
-      <div class="r-thanks">THANK YOU FOR SHOPPING AT WALGREENS</div>
-      <div class="r-barcode"></div>
-      <div class="r-myw">myW</div>
-      <div class="r-savings">TOTAL SAVINGS $1.20</div>
-    </div>`;
-  }
-
-  function loadDemo() {
-    stopPolling(); clearStatus();
-    currentRaw = DEMO;
-    document.getElementById('filename').textContent = 'sample_receipt.png';
-    document.getElementById('pageInfo').textContent = 'Page 1 of 1';
-    document.getElementById('preview').innerHTML = demoReceiptHTML();
-    renderDemo(DEMO);
-  }
-
-  function renderDemo(d) {
-    const html =
-      '<div class="meta-bar">' +
-        '<span class="badge-ok">✓ Extracted</span>' +
-        '<div style="display:flex;gap:8px;align-items:center;">' +
-          '<span class="tag">🧾 receipt</span>' +
-          '<button class="btn-csv" onclick="exportDemoCSV()">⬇ CSV</button>' +
-        '</div>' +
-      '</div>' +
-      '<div class="vendor-box">' +
-        '<div class="vendor-box-top">' +
-          '<div class="vendor-logo-cell"><div class="vendor-logo"><div class="vendor-logo-icon">W</div><span>' + escapeHtml(d.vendor.name) + '</span></div></div>' +
-          '<div class="vendor-meta-cell">' +
-            '<div class="vendor-meta-item"><div class="vendor-meta-label">Vendor Phone</div><div class="vendor-meta-value">' + escapeHtml(d.vendor.phone) + '</div></div>' +
-            '<div class="vendor-meta-item"><div class="vendor-meta-label">Vendor Type</div><div class="vendor-meta-value">' + escapeHtml(d.vendor.type) + '</div></div>' +
-          '</div>' +
-        '</div>' +
-        '<div class="vendor-row-2">' +
-          '<div class="vendor-cell"><div class="label">Receipt Date</div><div class="val">' + escapeHtml(d.receipt_date) + '</div></div>' +
-          '<div class="vendor-cell"><div class="label">Payment</div><div class="card-box"><div class="card-head"><div>Card Number</div><div>Name</div><div>Type</div></div><div class="card-body"><div>' + escapeHtml(d.payment.card_number) + '</div><div>' + escapeHtml(d.payment.name) + '</div><div>' + escapeHtml(d.payment.type) + '</div></div></div></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="section-title">☰ Line Items</div>' +
-      '<table class="line-table"><thead><tr><th>#</th><th>SKU</th><th>Item</th><th>Type</th><th class="num">Quantity</th><th class="num">Price</th><th class="num">Total</th></tr></thead><tbody>' +
-        d.line_items.map((it, i) => '<tr><td class="idx">' + (i + 1) + '</td><td>' + escapeHtml(it.sku) + '</td><td>' + escapeHtml(it.item) + '</td><td>' + escapeHtml(it.type) + '</td><td class="num">' + it.quantity + '</td><td class="num">' + it.price.toFixed(2) + '</td><td class="num">' + it.total.toFixed(2) + '</td></tr>').join('') +
-      '</tbody></table>';
-    document.getElementById('resultsVisual').innerHTML = html;
-    document.getElementById('jsonContent').textContent = JSON.stringify(d, null, 2);
-  }
-
-  function exportDemoCSV() {
-    let csv = 'field,value,confidence\n';
-    for (const k in DEMO.fields) csv += '"' + k + '","' + DEMO.fields[k].value + '",' + DEMO.fields[k].confidence + '\n';
-    const blob = new Blob([csv], { type:'text/csv' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'sample_extraction.csv';
-    a.click();
-  }
-
-  // ============================================================
-  // Upload flow
-  // ============================================================
   function previewFile(file) {
     const box = document.getElementById('preview');
     document.getElementById('filename').textContent = file.name;
@@ -727,19 +551,136 @@
     }
   }
 
+  // ============================================================
+  // ⬇ CSV EXPORT — with Line Items section
+  // ============================================================
   function exportCSV() {
     if (!currentRaw) return;
     const norm = normalizeDoc(currentRaw);
-    let csv = 'field,value,confidence\n';
+
+    let csv = '';
+
+    // Section 1: FIELDS
+    csv += '=== EXTRACTED FIELDS ===\n';
+    csv += 'field,value,confidence\n';
     for (const k in norm.fields) {
       const f = norm.fields[k];
-      csv += '"' + k.replace(/"/g,'""') + '","' + String(f.value ?? '').replace(/"/g,'""') + '",' + (f.confidence ?? '') + '\n';
+      csv += '"' + k.replace(/"/g,'""') + '","' +
+             String(f.value ?? '').replace(/"/g,'""') + '",' +
+             (f.confidence ?? '') + '\n';
     }
-    const blob = new Blob([csv], { type:'text/csv' });
+
+    // Section 2: LINE ITEMS
+    if (norm.items && norm.items.length > 0) {
+      csv += '\n=== LINE ITEMS ===\n';
+      csv += '#,description,quantity,unit_price,amount\n';
+      norm.items.forEach((item, i) => {
+        csv += (i + 1) + ',' +
+               '"' + String(item.description ?? '').replace(/"/g,'""') + '",' +
+               (item.quantity ?? '') + ',' +
+               (item.unit_price ?? '') + ',' +
+               (item.amount ?? '') + '\n';
+      });
+    }
+
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = 'extraction.csv';
     a.click();
+  }
+
+  // ============================================================
+  // DEMO: Walgreens Receipt
+  // ============================================================
+  const DEMO = {
+    document_id: "demo-sample-001",
+    status: "extracted",
+    document_type: "receipt",
+    vendor: { name: "Walgreens", phone: "650-342-2723",
+      type: "drugstores, convenience stores, cosmetics & beauty supply" },
+    receipt_date: "March 28, 2023, 1:10 pm",
+    payment: { card_number: "1850", name: "Visa ***1850", type: "visa" },
+    fields: {
+      vendor_name: { value: "Walgreens", confidence: 0.98 },
+      vendor_phone: { value: "650-342-2723", confidence: 0.94 },
+      vendor_type: { value: "drugstores, convenience stores, cosmetics & beauty supply", confidence: 0.85 },
+      receipt_date: { value: "March 28, 2023, 1:10 pm", confidence: 0.96 },
+      payment_card: { value: "Visa ***1850", confidence: 0.92 },
+      payment_type: { value: "visa", confidence: 0.94 },
+      subtotal: { value: "27.60", confidence: 0.95 },
+      sales_tax: { value: "1.83", confidence: 0.95 },
+      total: { value: "29.43", confidence: 0.97 },
+    },
+    line_items: [
+      { sku: "61126943157", item: "RED BULL ENRGY DRK CNS 8.4OZ 6PK", type: "food", quantity: 1, price: 9.99, total: 8.79 },
+      { sku: "00000007211", item: "CA REDMP VAL", type: "fee", quantity: 1, price: 0.00, total: 0.30 },
+      { sku: "04100000749", item: "NAB OREO CKTS C/P 5.25OZ WMS", type: "food", quantity: 1, price: 2.69, total: 2.69 },
+      { sku: "02840003205", item: "DORITOS NACHO CHEESE", type: "food", quantity: 1, price: 2.00, total: 2.00 },
+      { sku: "02100001315", item: "F/LAYS REGULAR 2.63OZ", type: "food", quantity: 1, price: 2.00, total: 2.00 },
+      { sku: "03760010022", item: "SCOTCH BRITE 6/PAD KITCHEN SPONGE", type: "household", quantity: 1, price: 4.79, total: 4.79 },
+      { sku: "01650058637", item: "PALMOLIVE DISH POWER", type: "household", quantity: 1, price: 1.49, total: 1.49 },
+      { sku: "02100000581", item: "SHIPPING BAG FEE", type: "fee", quantity: 1, price: 0.25, total: 0.25 },
+    ],
+  };
+
+  function demoReceiptHTML() {
+    return '<div class="receipt-paper">' +
+      '<div class="r-logo">Walgreens</div>' +
+      '<div class="r-addr">02296 191 E 3RD AVE<br>SAN MATEO, CA 94401<br>650-342-2723</div>' +
+      '<div class="r-meta">117 &nbsp; 4782 &nbsp; 0022 &nbsp; 03/28/2023 &nbsp; 1:10 PM</div>' +
+      '<div class="r-divider"></div>' +
+      '<div class="r-item"><div class="r-item-name">RED BULL ENRGY DRK CNS 8.4OZ 6PK</div><div class="r-item-row"><span>61126943157</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 9.99</span></div><div class="r-item-row"><span>MYWALGREENS SAVINGS 1.20</span><span>8.79 SALE</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">CA REDMP VAL</div><div class="r-item-row"><span>00000007211</span><span>0.30</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">NAB OREO CKTS C/P 5.25OZ WMS</div><div class="r-item-row"><span>04400000749</span><span>A</span></div><div class="r-item-row"><span>REGULAR PRICE 2.69</span><span>2.69</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">DORITOS NACHO CHEESE</div><div class="r-item-row"><span>02840003205</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">F/LAYS REGULAR 2.63OZ</div><div class="r-item-row"><span>02100001315</span><span>A</span></div><div class="r-item-row"><span>2.00</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">SCOTCH BRITE 6/PAD KITCHEN SPONGE</div><div class="r-item-row"><span>03760010022</span><span>A</span></div><div class="r-item-row"><span>4.79</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">PALMOLIVE DISH POWER</div><div class="r-item-row"><span>01650058637</span><span>A</span></div><div class="r-item-row"><span>1.49</span></div></div>' +
+      '<div class="r-item"><div class="r-item-name">SHIPPING BAG FEE</div><div class="r-item-row"><span>02100000581</span><span>0.25</span></div></div>' +
+      '<div class="r-divider"></div>' +
+      '<div class="r-totals"><div class="r-total-row"><span>SUBTOTAL</span><span>27.60</span></div><div class="r-total-row"><span>SALES TAX 6.50%</span><span>1.83</span></div><div class="r-total-row r-grand"><span>TOTAL</span><span>29.43</span></div></div>' +
+      '<div class="r-totals"><div class="r-total-row"><span>VISA ACCT 1850</span><span>29.43</span></div><div class="r-total-row"><span>AUTH CODE 060861</span></div></div>' +
+      '<div class="r-divider"></div>' +
+      '<div class="r-thanks">THANK YOU FOR SHOPPING AT WALGREENS</div>' +
+      '<div class="r-barcode"></div>' +
+      '<div class="r-myw">myW</div>' +
+      '<div class="r-savings">TOTAL SAVINGS $1.20</div>' +
+    '</div>';
+  }
+
+  function loadDemo() {
+    stopPolling(); clearStatus();
+    currentRaw = DEMO;
+    document.getElementById('filename').textContent = 'sample_receipt.png';
+    document.getElementById('pageInfo').textContent = 'Page 1 of 1';
+    document.getElementById('preview').innerHTML = demoReceiptHTML();
+    renderDemo(DEMO);
+  }
+
+  function renderDemo(d) {
+    let html = '<div class="meta-bar">' +
+      '<span class="badge-ok">✓ Extracted</span>' +
+      '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<span class="tag">🧾 receipt</span>' +
+        '<button class="btn-csv" onclick="exportCSV()">⬇ CSV</button>' +
+      '</div>' +
+    '</div>';
+    html += '<div class="field-grid" style="padding:0 20px 20px;">';
+    for (const k in d.fields) {
+      const f = d.fields[k];
+      const confPct = Math.round((f.confidence ?? 0) * 100) + '%';
+      const cls = f.confidence < 0.7 ? 'conf-med' : 'conf-high';
+      html += '<div class="field-card">' +
+        '<span class="field-conf ' + cls + '">' + confPct + '</span>' +
+        '<div class="field-label">' + escapeHtml(k.replace(/_/g, ' ')) + '</div>' +
+        '<div class="field-value">' + escapeHtml(String(f.value)) + '</div>' +
+      '</div>';
+    }
+    html += '</div>';
+    document.getElementById('resultsVisual').innerHTML = html;
+    document.getElementById('jsonContent').textContent = JSON.stringify(d, null, 2);
+    currentRaw = d;
   }
 
   // ============================================================

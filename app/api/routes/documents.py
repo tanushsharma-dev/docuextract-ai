@@ -4,6 +4,7 @@ import logging
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -26,6 +27,58 @@ ALLOWED_TYPES = [
 ]
 
 
+# ==========================================================
+# ⚡ STATS (fast aggregate — ONE query per metric)
+# ==========================================================
+@router.get("/stats")
+def get_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    uid = current_user.id
+
+    total = db.query(func.count(Document.id)).filter(Document.user_id == uid).scalar() or 0
+
+    extracted = db.query(func.count(Document.id)).filter(
+        Document.user_id == uid,
+        Document.status.in_(["extracted", "needs_review"]),
+    ).scalar() or 0
+
+    failed = db.query(func.count(Document.id)).filter(
+        Document.user_id == uid,
+        Document.status == "failed",
+    ).scalar() or 0
+
+    needs_review = db.query(func.count(Document.id)).filter(
+        Document.user_id == uid,
+        Document.status == "needs_review",
+    ).scalar() or 0
+
+    processing = db.query(func.count(Document.id)).filter(
+        Document.user_id == uid,
+        Document.status.in_(["uploaded", "processing"]),
+    ).scalar() or 0
+
+    # Average confidence across user's extracted fields (single JOIN query)
+    avg_conf = db.query(func.avg(ExtractedField.confidence)).join(
+        Document, Document.id == ExtractedField.document_id
+    ).filter(Document.user_id == uid).scalar()
+
+    accuracy = round(float(avg_conf) * 100) if avg_conf is not None else 0
+
+    return {
+        "total": total,
+        "extracted": extracted,
+        "failed": failed,
+        "needs_review": needs_review,
+        "processing": processing,
+        "accuracy": accuracy,
+    }
+
+
+# ==========================================================
+# UPLOAD
+# ==========================================================
 @router.post("/")
 def upload_document(
     file: UploadFile = File(...),
@@ -63,6 +116,9 @@ def upload_document(
     }
 
 
+# ==========================================================
+# LIST (user's own documents only)
+# ==========================================================
 @router.get("/")
 def list_documents(
     db: Session = Depends(get_db),
@@ -89,6 +145,9 @@ def list_documents(
     }
 
 
+# ==========================================================
+# SINGLE DOCUMENT
+# ==========================================================
 @router.get("/{document_id}")
 def get_document(
     document_id: UUID,
@@ -112,6 +171,9 @@ def get_document(
     }
 
 
+# ==========================================================
+# EXTRACTION RESULT
+# ==========================================================
 @router.get("/{document_id}/extraction")
 def get_extraction(
     document_id: UUID,

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocuExtract AI — Turn Documents Into Data</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter','Segoe UI',system-ui,sans-serif; }
+  html, body { background:#050814; color:#e2e8f0; scroll-behavior:smooth; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(139,92,246,.25), transparent 60%),
+      radial-gradient(1000px 500px at 10% 0%, rgba(6,182,212,.18), transparent 60%),
+      #050814;
+    min-height:100vh;
+  }
+
+  /* NAV */
+  .nav {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:20px 6vw; max-width:1400px; margin:0 auto;
+    position:sticky; top:0; z-index:100;
+    backdrop-filter:blur(20px);
+    background:rgba(5,8,20,.6);
+  }
+  .brand { display:flex; align-items:center; gap:12px; }
+  .brand-mark {
+    width:40px; height:40px; border-radius:12px;
+    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+    display:grid; place-items:center; font-size:20px;
+    box-shadow:0 8px 24px rgba(139,92,246,.35);
+  }
+  .brand h1 { font-size:18px; }
+  .brand h1 span { background:linear-gradient(135deg,#22d3ee,#a78bfa);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  .nav-links { display:flex; gap:10px; align-items:center; }
+  .nav-links a {
+    color:#cbd5e1; text-decoration:none; font-size:14px;
+    padding:8px 16px; border-radius:22px;
+    transition:.2s; font-weight:500;
+  }
+  .nav-links a:hover { color:#22d3ee; }
+  .nav-links .btn-login {
+    background:linear-gradient(135deg,#22d3ee,#8b5cf6);
+    color:#fff; font-weight:600;
+    box-shadow:0 8px 24px rgba(34,211,238,.3);
+    padding:10px 22px;
+  }
+  .nav-links .btn-login:hover { transform:translateY(-1px); color:#fff; }
+
+  /* HERO */
+  .hero { max-width:1100px; margin:0 auto; padding:80px 6vw 60px; text-align:center; }
+  .hero-badge {
+    display:inline-flex; align-items:center; gap:8px;
+    background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.25);
+    color:#22d3ee; font-size:13px; font-weight:500;
+    padding:8px 18px; border-radius:999px; margin-bottom:28px;
+  }
+  .hero-badge .dot {
+    width:6px; height:6px; border-radius:50%;
+    background:#22d3ee; box-shadow:0 0 10px #22d3ee;
+  }
+  .hero h2 {
+    font-size:clamp(32px, 6vw, 68px);
+    font-weight:800; letter-spacing:-.03em; line-height:1.05;
+    margin-bottom:24px;
+  }
+  .hero h2 .accent {
+    background:linear-gradient(120deg,#22d3ee,#8b5cf6 60%,#a78bfa);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .hero p {
+    font-size:clamp(15px, 1.8vw, 18px);
+    color:#94a3b8; max-width:680px; margin:0 auto 36px;
+    line-height:1.65;
+  }
+  .hero-buttons { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+  .btn {
+    padding:14px 28px; border-radius:12px;
+    font-size:15px; font-weight:600; cursor:pointer;
+    text-decoration:none; transition:.2s;
+    display:inline-flex; align-items:center; gap:8px;
+    font-family:inherit; border:none;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg,#22d3ee,#8b5cf6);
+    color:#fff;
+    box-shadow:0 12px 32px rgba(34,211,238,.35);
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 16px 40px rgba(34,211,238,.5); }
+  .btn-secondary {
+    background:rgba(15,23,42,.7);
+    color:#cbd5e1;
+    border:1px solid rgba(148,163,184,.2);
+  }
+  .btn-secondary:hover { border-color:rgba(34,211,238,.4); color:#22d3ee; }
+
+  /* HOW IT WORKS */
+  .how { max-width:1200px; margin:0 auto; padding:80px 6vw; }
+  .section-title {
+    text-align:center; margin-bottom:50px;
+  }
+  .section-title h3 {
+    font-size:clamp(24px, 3.5vw, 38px);
+    font-weight:800; letter-spacing:-.02em; margin-bottom:12px;
+  }
+  .section-title p { color:#94a3b8; font-size:16px; }
+
+  .steps {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:20px;
+  }
+  .step {
+    background:rgba(9,13,28,.7);
+    border:1px solid rgba(148,163,184,.12);
+    border-radius:18px; padding:32px 26px;
+    position:relative; transition:.3s;
+  }
+  .step:hover {
+    border-color:rgba(34,211,238,.35);
+    transform:translateY(-4px);
+    box-shadow:0 20px 40px rgba(34,211,238,.08);
+  }
+  .step-num {
+    position:absolute; top:24px; right:26px;
+    font-size:13px; font-weight:700;
+    color:#475569; letter-spacing:.15em;
+  }
+  .step-icon {
+    width:52px; height:52px; border-radius:14px;
+    display:grid; place-items:center; font-size:24px;
+    margin-bottom:20px;
+  }
+  .step-icon-1 { background:rgba(59,130,246,.15); color:#60a5fa; }
+  .step-icon-2 { background:rgba(168,85,247,.15); color:#c084fc; }
+  .step-icon-3 { background:rgba(16,185,129,.15); color:#34d399; }
+  .step h4 { font-size:19px; font-weight:700; margin-bottom:10px; }
+  .step p { color:#64748b; font-size:14px; line-height:1.6; }
+
+  /* FEATURES */
+  .features { max-width:1200px; margin:0 auto; padding:80px 6vw; }
+  .feature-grid {
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+    gap:18px;
+  }
+  .feature {
+    background:rgba(9,13,28,.5);
+    border:1px solid rgba(148,163,184,.1);
+    border-radius:16px; padding:24px;
+    transition:.2s;
+  }
+  .feature:hover { border-color:rgba(34,211,238,.25); background:rgba(9,13,28,.8); }
+  .feature-icon { font-size:28px; margin-bottom:14px; }
+  .feature h5 { font-size:16px; font-weight:700; margin-bottom:8px; }
+  .feature p { color:#64748b; font-size:13px; line-height:1.6; }
+
+  /* CTA */
+  .cta {
+    max-width:900px; margin:60px auto;
+    padding:60px 40px;
+    background:linear-gradient(135deg, rgba(34,211,238,.1), rgba(139,92,246,.1));
+    border:1px solid rgba(34,211,238,.2);
+    border-radius:24px; text-align:center;
+  }
+  .cta h3 {
+    font-size:clamp(24px, 4vw, 36px);
+    font-weight:800; letter-spacing:-.02em; margin-bottom:16px;
+  }
+  .cta p { color:#94a3b8; font-size:16px; margin-bottom:30px; }
+
+  /* FOOTER */
+  .footer {
+    border-top:1px solid rgba(148,163,184,.1);
+    padding:32px 6vw; text-align:center;
+    color:#64748b; font-size:13px;
+  }
+  .footer a { color:#22d3ee; text-decoration:none; }
+  .footer a:hover { text-decoration:underline; }
+
+  @media (max-width:640px) {
+    .hero { padding:50px 6vw 40px; }
+    .nav { padding:16px 5vw; }
+    .nav-links a:not(.btn-login) { display:none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand">
+    <div class="brand-mark">📄</div>
+    <h1>DocuExtract <span>AI</span></h1>
+  </div>
+  <div class="nav-links">
+    <a href="#how">How it works</a>
+    <a href="#features">Features</a>
+    <a href="/ui/login.html" class="btn-login">Sign In</a>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">
+    <span class="dot"></span>
+    Powered by OCR + Vision AI + Rules Engine
+  </div>
+  <h2>Turn Any Document Into <span class="accent">Structured Data</span></h2>
+  <p>
+    Upload invoices, receipts, or forms — our AI reads every field,
+    scores each one's confidence, and flags what needs your attention.
+    No manual typing. No guesswork.
+  </p>
+  <div class="hero-buttons">
+    <a href="/ui/login.html" class="btn btn-primary">
+      Get Started Free →
+    </a>
+    <a href="/ui/upload.html" class="btn btn-secondary">
+      Try Live Demo
+    </a>
+  </div>
+</section>
+
+<section class="how" id="how">
+  <div class="section-title">
+    <h3>How It Works</h3>
+    <p>Three simple steps to go from paper to pixels</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon step-icon-1">📤</div>
+      <h4>Upload Document</h4>
+      <p>Drag and drop a PDF, JPEG, or PNG. Multi-page and bulk upload supported.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon step-icon-2">🧠</div>
+      <h4>AI Reads & Extracts</h4>
+      <p>OCR + Vision AI identify every field, total, line item, and metadata with confidence scores.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon step-icon-3">✅</div>
+      <h4>Review & Export</h4>
+      <p>Confidence-scored fields, low-trust items flagged for review, and one-click CSV export.</p>
+    </div>
+  </div>
+</section>
+
+<section class="features" id="features">
+  <div class="section-title">
+    <h3>Built For Real Work</h3>
+    <p>Enterprise-grade features, consumer-grade simplicity</p>
+  </div>
+  <div class="feature-grid">
+    <div class="feature">
+      <div class="feature-icon">⚡</div>
+      <h5>Fast Extraction</h5>
+      <p>Process invoices in seconds with parallel OCR + LLM pipeline.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎯</div>
+      <h5>Confidence Scoring</h5>
+      <p>Every field gets a score. Trust high, review low — automated.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🔒</div>
+      <h5>User Isolated</h5>
+      <p>Your documents stay yours. Per-user data separation built in.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📊</div>
+      <h5>Line Item Tables</h5>
+      <p>Full table extraction — SKUs, quantities, prices, taxes.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📥</div>
+      <h5>CSV Export</h5>
+      <p>Download extracted data instantly in spreadsheet-ready format.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🌐</div>
+      <h5>Multiple Doc Types</h5>
+      <p>Invoices, receipts, bank statements, ID cards, and forms.</p>
+    </div>
+  </div>
+</section>
+
+<section class="cta">
+  <h3>Ready to extract?</h3>
+  <p>Sign up free — no credit card, no setup, ready in 30 seconds.</p>
+  <a href="/ui/login.html" class="btn btn-primary">Get Started →</a>
+</section>
+
+<footer class="footer">
+  © 2026 DocuExtract AI · Built by <a href="https://github.com/tanushsharma-dev" target="_blank">Tanush Sharma</a>
+</footer>
+
+</body>
+</html>

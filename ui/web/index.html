@@ -13,51 +13,72 @@
       radial-gradient(1000px 500px at 10% 0%, rgba(6,182,212,.15), transparent 60%),
       #050814;
   }
-  .topbar { display:flex; justify-content:space-between; align-items:center;
-            padding:18px 40px; max-width:1500px; margin:0 auto; }
+
+  .topbar {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:18px 40px; max-width:1500px; margin:0 auto;
+  }
   .brand { display:flex; align-items:center; gap:12px; }
-  .brand-mark { width:42px; height:42px; border-radius:12px;
-                background:linear-gradient(135deg,#06b6d4,#8b5cf6);
-                display:grid; place-items:center; font-size:20px;
-                box-shadow:0 8px 24px rgba(139,92,246,.35); }
+  .brand-mark {
+    width:42px; height:42px; border-radius:12px;
+    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+    display:grid; place-items:center; font-size:20px;
+    box-shadow:0 8px 24px rgba(139,92,246,.35);
+  }
   .brand h1 { font-size:18px; }
   .brand h1 span { background:linear-gradient(135deg,#22d3ee,#a78bfa);
-                   -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
   .brand small { display:block; font-size:10px; letter-spacing:.25em; color:#64748b; margin-top:2px; }
   .nav { display:flex; align-items:center; gap:10px; }
-  .nav a, .nav button { color:#cbd5e1; text-decoration:none; font-size:13px;
+  .nav a, .nav button {
+    color:#cbd5e1; text-decoration:none; font-size:13px;
     padding:9px 16px; border-radius:22px;
     border:1px solid rgba(148,163,184,.15);
-    background:rgba(15,23,42,.6); cursor:pointer; transition:.2s;
-    font-family:inherit; display:inline-flex; align-items:center; gap:6px; }
-  .nav a:hover, .nav button:hover { color:#22d3ee; border-color:rgba(34,211,238,.4); }
+    background:rgba(15,23,42,.6); cursor:pointer;
+    font-family:inherit; display:inline-flex; align-items:center; gap:6px;
+    transition:.2s;
+  }
+  .nav a:hover { color:#22d3ee; border-color:rgba(34,211,238,.4); }
   .nav .user { display:flex; align-items:center; gap:8px; padding-left:6px; }
-  .nav .avatar { width:26px; height:26px; border-radius:50%;
-                 background:linear-gradient(135deg,#06b6d4,#8b5cf6);
-                 display:grid; place-items:center; font-size:12px; font-weight:700; color:#0b1220; }
-  .nav .logout-btn { background:linear-gradient(135deg,#ef4444,#dc2626);
-                     color:#fff; border:none; font-weight:600; }
-  .nav .logout-btn:hover { box-shadow:0 8px 20px rgba(239,68,68,.4); color:#fff; }
+  .nav .avatar {
+    width:26px; height:26px; border-radius:50%;
+    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
+    display:grid; place-items:center;
+    font-size:12px; font-weight:700; color:#0b1220;
+  }
+  .nav .logout-btn {
+    background:linear-gradient(135deg,#ef4444,#dc2626);
+    color:#fff; border:none; font-weight:600;
+  }
+  .nav .logout-btn:hover { box-shadow:0 8px 20px rgba(239,68,68,.4); }
 
   .container { max-width:1300px; margin:30px auto 60px; padding:0 40px; }
 
   .hero { margin-bottom:32px; }
-  .hero-badge { display:inline-flex; align-items:center; gap:8px;
+  .hero-badge {
+    display:inline-flex; align-items:center; gap:8px;
     background:rgba(34,211,238,.08); border:1px solid rgba(34,211,238,.25);
     color:#22d3ee; font-size:12px; font-weight:500;
-    padding:6px 14px; border-radius:999px; margin-bottom:16px; }
+    padding:6px 14px; border-radius:999px; margin-bottom:16px;
+  }
   .hero-badge .dot { width:6px; height:6px; border-radius:50%; background:#22d3ee; box-shadow:0 0 10px #22d3ee; }
   .hero h2 { font-size:42px; font-weight:800; letter-spacing:-.025em; line-height:1.1; max-width:800px; }
   .hero h2 .accent { background:linear-gradient(120deg,#22d3ee,#8b5cf6 60%,#a78bfa);
-                     -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
   .hero p { margin-top:12px; color:#94a3b8; font-size:15px; max-width:640px; line-height:1.65; }
 
   .stats { display:grid; grid-template-columns:repeat(4, 1fr); gap:14px; margin:32px 0; }
-  .stat { background:rgba(9,13,28,.7); border:1px solid rgba(148,163,184,.12);
-          border-radius:14px; padding:18px 20px; transition:.2s; position:relative; overflow:hidden; }
-  .stat::before { content:''; position:absolute; top:0; left:0; right:0; height:2px;
-                  background:linear-gradient(90deg, transparent, rgba(34,211,238,.5), transparent);
-                  opacity:0; transition:.3s; }
+  .stat {
+    background:rgba(9,13,28,.7);
+    border:1px solid rgba(148,163,184,.12);
+    border-radius:14px; padding:18px 20px;
+    transition:.2s; position:relative; overflow:hidden;
+  }
+  .stat::before {
+    content:''; position:absolute; top:0; left:0; right:0; height:2px;
+    background:linear-gradient(90deg, transparent, rgba(34,211,238,.5), transparent);
+    opacity:0; transition:.3s;
+  }
   .stat:hover { border-color:rgba(34,211,238,.3); transform:translateY(-2px); }
   .stat:hover::before { opacity:1; }
   .stat-label { font-size:11px; color:#64748b; letter-spacing:.12em;
@@ -76,10 +97,15 @@
     background:linear-gradient(90deg, rgba(148,163,184,.15), transparent); }
 
   .actions { display:grid; grid-template-columns:repeat(3, 1fr); gap:16px; margin-bottom:32px; }
-  .action-card { background:rgba(9,13,28,.7); border:1px solid rgba(148,163,184,.12);
-    border-radius:16px; padding:24px 22px; cursor:pointer; transition:.25s;
-    display:flex; flex-direction:column; gap:14px; position:relative; overflow:hidden;
-    text-decoration:none; color:inherit; }
+  .action-card {
+    background:rgba(9,13,28,.7);
+    border:1px solid rgba(148,163,184,.12);
+    border-radius:16px; padding:24px 22px;
+    cursor:pointer; transition:.25s;
+    display:flex; flex-direction:column; gap:14px;
+    position:relative; overflow:hidden;
+    text-decoration:none; color:inherit;
+  }
   .action-card::after { content:'→'; position:absolute; top:24px; right:22px;
     font-size:18px; color:#334155; transition:.25s; }
   .action-card:hover { border-color:rgba(34,211,238,.35); transform:translateY(-3px);
@@ -100,17 +126,18 @@
   .recent-head h3 { font-size:15px; font-weight:700; color:#e2e8f0; }
   .recent-head a { font-size:12px; color:#22d3ee; text-decoration:none; }
   .recent-head a:hover { text-decoration:underline; }
-  .recent-list { max-height:280px; overflow-y:auto; }
+  .recent-list { max-height:400px; overflow-y:auto; }
   .recent-item { display:flex; justify-content:space-between; align-items:center;
     padding:14px 22px; border-bottom:1px solid rgba(148,163,184,.06);
-    transition:.15s; cursor:pointer; }
+    transition:.15s; }
   .recent-item:last-child { border-bottom:none; }
   .recent-item:hover { background:rgba(34,211,238,.04); }
-  .recent-left { display:flex; align-items:center; gap:14px; }
-  .recent-icon { width:34px; height:34px; border-radius:8px;
+  .recent-left { display:flex; align-items:center; gap:14px; min-width:0; }
+  .recent-icon { width:34px; height:34px; border-radius:8px; flex-shrink:0;
     background:rgba(148,163,184,.1); display:grid; place-items:center;
     font-size:14px; color:#94a3b8; }
-  .recent-filename { font-size:13px; font-weight:600; color:#e2e8f0; }
+  .recent-filename { font-size:13px; font-weight:600; color:#e2e8f0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:400px; }
   .recent-meta { font-size:11px; color:#64748b; margin-top:3px; }
   .recent-status { font-size:11px; font-weight:600; padding:4px 10px;
     border-radius:999px; white-space:nowrap; }
@@ -122,52 +149,14 @@
   .empty-recent { padding:40px 22px; text-align:center; color:#475569; font-size:13px; }
   .empty-recent .big { font-size:38px; opacity:.35; margin-bottom:10px; }
 
-  /* ============================================================
-     FOOTER
-     ============================================================ */
-  .site-footer { margin-top:60px; padding:28px 40px 24px;
-    border-top:1px solid rgba(148,163,184,.1);
-    background:rgba(5,8,20,.4); backdrop-filter:blur(12px); }
-  .footer-inner { max-width:1500px; margin:0 auto;
-    display:flex; align-items:center; justify-content:space-between;
-    gap:24px; flex-wrap:wrap; }
-  .footer-left { display:flex; align-items:center; gap:14px; }
-  .footer-avatar { width:40px; height:40px; border-radius:50%;
-    background:linear-gradient(135deg,#06b6d4,#8b5cf6);
-    display:grid; place-items:center;
-    font-size:15px; font-weight:700; color:#0b1220;
-    box-shadow:0 4px 14px rgba(139,92,246,.3); letter-spacing:-.02em; }
-  .footer-text { display:flex; flex-direction:column; gap:3px; }
-  .footer-name { font-size:14px; font-weight:700; color:#e2e8f0; letter-spacing:-.01em; }
-  .footer-role { font-size:11px; color:#64748b; letter-spacing:.08em;
-    text-transform:uppercase; font-weight:600; }
-  .footer-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
-  .footer-link { display:inline-flex; align-items:center; gap:7px;
-    padding:8px 14px; border-radius:10px;
-    background:rgba(15,23,42,.6); border:1px solid rgba(148,163,184,.15);
-    color:#94a3b8; text-decoration:none; font-size:12px; font-weight:500;
-    transition:.2s; font-family:inherit; }
-  .footer-link:hover { color:#22d3ee; border-color:rgba(34,211,238,.4);
-    background:rgba(34,211,238,.05); transform:translateY(-1px); }
-  .footer-link svg { width:14px; height:14px; flex-shrink:0; }
-  .footer-link.linkedin:hover { color:#0a66c2; border-color:rgba(10,102,194,.5);
-    background:rgba(10,102,194,.08); }
-  .footer-link.github:hover { color:#e2e8f0; border-color:rgba(226,232,240,.35);
-    background:rgba(226,232,240,.06); }
-  .footer-link.mail:hover { color:#f87171; border-color:rgba(248,113,113,.4);
-    background:rgba(248,113,113,.06); }
-  .footer-copy { max-width:1500px; margin:18px auto 0; text-align:center;
-    font-size:11px; color:#475569; letter-spacing:.04em; }
-
-  @media (max-width:1000px) { .stats { grid-template-columns:repeat(2, 1fr); }
-    .actions { grid-template-columns:1fr; } }
-  @media (max-width:700px) {
+  @media (max-width:1000px) {
+    .stats { grid-template-columns:repeat(2, 1fr); }
+    .actions { grid-template-columns:1fr; }
+  }
+  @media (max-width:640px) {
     .topbar, .container { padding-left:20px; padding-right:20px; }
     .hero h2 { font-size:30px; }
     .stats { grid-template-columns:1fr 1fr; }
-    .site-footer { padding:24px 20px; }
-    .footer-inner { flex-direction:column; text-align:center; }
-    .footer-right { justify-content:center; }
   }
 </style>
 </head>
@@ -202,9 +191,9 @@
 
   <div class="stats">
     <div class="stat">
-      <div class="stat-label">📄 Documents</div>
+      <div class="stat-label">📄 Total</div>
       <div class="stat-value loading" id="statDocs">—</div>
-      <div class="stat-sub">Total uploaded</div>
+      <div class="stat-sub">All uploaded</div>
     </div>
     <div class="stat">
       <div class="stat-label">✅ Extracted</div>
@@ -212,9 +201,9 @@
       <div class="stat-sub">Successfully processed</div>
     </div>
     <div class="stat">
-      <div class="stat-label">⚠ Needs Review</div>
-      <div class="stat-value loading" id="statReview">—</div>
-      <div class="stat-sub">Low-confidence fields</div>
+      <div class="stat-label">❌ Failed</div>
+      <div class="stat-value loading" id="statFailed">—</div>
+      <div class="stat-sub">Processing errors</div>
     </div>
     <div class="stat">
       <div class="stat-label">⚡ Accuracy</div>
@@ -232,18 +221,18 @@
         <div class="action-desc">Extract structured data from PDFs, images, or handwritten documents.</div>
       </div>
     </a>
-    <a class="action-card" href="/ui/index.html">
-      <div class="action-icon action-icon-purple">📁</div>
-      <div>
-        <div class="action-title">My Documents</div>
-        <div class="action-desc">Browse extracted documents, view results, and export data.</div>
-      </div>
-    </a>
     <a class="action-card" href="/ui/review.html">
-      <div class="action-icon action-icon-amber">🔎</div>
+      <div class="action-icon action-icon-purple">🔎</div>
       <div>
         <div class="action-title">Review Queue</div>
         <div class="action-desc">Verify and correct low-confidence fields flagged by AI.</div>
+      </div>
+    </a>
+    <a class="action-card" href="/ui/analytics.html">
+      <div class="action-icon action-icon-amber">📊</div>
+      <div>
+        <div class="action-title">Analytics</div>
+        <div class="action-desc">View extraction trends, accuracy stats, and document breakdowns.</div>
       </div>
     </a>
   </div>
@@ -252,7 +241,7 @@
   <div class="recent">
     <div class="recent-head">
       <h3>Latest Documents</h3>
-      <a href="/ui/index.html">View all →</a>
+      <a href="/ui/upload.html">Upload new →</a>
     </div>
     <div class="recent-list" id="recentList">
       <div class="empty-recent">
@@ -262,42 +251,6 @@
     </div>
   </div>
 </div>
-
-<footer class="site-footer">
-  <div class="footer-inner">
-    <div class="footer-left">
-      <div class="footer-avatar">TS</div>
-      <div class="footer-text">
-        <div class="footer-name">Tanush Sharma</div>
-        <div class="footer-role">Full Stack Developer · Creator of DocuExtract AI</div>
-      </div>
-    </div>
-    <div class="footer-right">
-      <a class="footer-link mail" href="mailto:tanushsharma052@gmail.com" title="Email">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
-          <polyline points="22,6 12,13 2,6"></polyline>
-        </svg>
-        Email
-      </a>
-      <a class="footer-link linkedin" href="https://www.linkedin.com/in/tanush-sharma-8b1807280/" target="_blank" rel="noopener" title="LinkedIn">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 1 1 8.3 6.5a1.78 1.78 0 0 1-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0 0 13 14.19a.66.66 0 0 0 0 .14V19h-3v-9h2.9v1.3a3.11 3.11 0 0 1 2.7-1.4c1.55 0 3.36.86 3.36 3.66z"/>
-        </svg>
-        LinkedIn
-      </a>
-      <a class="footer-link github" href="https://github.com/tanushsharma-dev" target="_blank" rel="noopener" title="GitHub">
-        <svg viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.11.79-.25.79-.56v-2.17c-3.2.7-3.88-1.36-3.88-1.36-.53-1.34-1.29-1.7-1.29-1.7-1.06-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.72 1.27 3.38.97.11-.75.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.28 1.19-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.06 11.06 0 0 1 5.79 0c2.21-1.49 3.18-1.18 3.18-1.18.62 1.58.23 2.75.11 3.04.74.81 1.19 1.83 1.19 3.09 0 4.42-2.7 5.39-5.26 5.68.42.36.79 1.08.79 2.18v3.23c0 .31.21.68.8.56C20.21 21.39 23.5 17.08 23.5 12 23.5 5.65 18.35.5 12 .5z"/>
-        </svg>
-        GitHub
-      </a>
-    </div>
-  </div>
-  <div class="footer-copy">
-    © 2026 DocuExtract AI · Built with ❤️ by Tanush Sharma
-  </div>
-</footer>
 
 <script>
   const token = localStorage.getItem('token');
@@ -332,52 +285,33 @@
   }
 
   function statusLabel(s) {
-    s = (s || 'unknown').toLowerCase();
-    return s.replace(/_/g, ' ');
+    return (s || 'unknown').toLowerCase().replace(/_/g, ' ');
   }
 
   async function loadDashboard() {
     try {
-      const res = await fetch('/api/v1/documents/', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const docs = data.documents || [];
+      // ⚡ FAST — parallel API calls
+      const [statsRes, docsRes] = await Promise.all([
+        fetch('/api/v1/documents/stats', { headers: { 'Authorization': 'Bearer ' + token } }),
+        fetch('/api/v1/documents/', { headers: { 'Authorization': 'Bearer ' + token } })
+      ]);
 
-      const total = docs.length;
-      const extracted = docs.filter(d => (d.status || '').toLowerCase() === 'extracted').length;
-      const review = docs.filter(d => (d.status || '').toLowerCase() === 'needs_review').length;
-
-      document.getElementById('statDocs').textContent = total;
+      // Stats
+      const stats = await statsRes.json();
+      document.getElementById('statDocs').textContent = stats.total;
       document.getElementById('statDocs').classList.remove('loading');
-      document.getElementById('statExtracted').textContent = extracted;
+      document.getElementById('statExtracted').textContent = stats.extracted;
       document.getElementById('statExtracted').classList.remove('loading');
-      document.getElementById('statReview').textContent = review;
-      document.getElementById('statReview').classList.remove('loading');
+      document.getElementById('statFailed').textContent = stats.failed;
+      document.getElementById('statFailed').classList.remove('loading');
+      document.getElementById('statAccuracy').innerHTML = stats.accuracy + '<span class="unit">%</span>';
+      document.getElementById('statAccuracy').classList.remove('loading');
 
-      let confSum = 0, confCount = 0;
-      const recent = docs.slice(0, 8);
-      for (const d of recent) {
-        try {
-          const ex = await fetch('/api/v1/documents/' + d.document_id + '/extraction', {
-            headers: { 'Authorization': 'Bearer ' + token }
-          });
-          if (!ex.ok) continue;
-          const j = await ex.json();
-          for (const k in (j.fields || {})) {
-            const c = j.fields[k].confidence;
-            if (typeof c === 'number') { confSum += c; confCount++; }
-          }
-        } catch (e) {}
-      }
-      const acc = confCount > 0 ? Math.round((confSum / confCount) * 100) : 0;
-      const accEl = document.getElementById('statAccuracy');
-      accEl.innerHTML = acc + '<span class="unit">%</span>';
-      accEl.classList.remove('loading');
-
-      renderRecent(docs.slice(0, 8));
+      // Recent docs
+      const data = await docsRes.json();
+      renderRecent((data.documents || []).slice(0, 8));
     } catch (e) {
+      console.error('[Dashboard] Load failed:', e);
       document.getElementById('recentList').innerHTML =
         '<div class="empty-recent"><div class="big">⚠️</div>' + escapeHtml(e.message) + '</div>';
     }
@@ -395,10 +329,10 @@
                    s === 'needs_review' ? '⚠️' :
                    s === 'processing' ? '⏳' :
                    s === 'failed' ? '❌' : '📄';
-      return '<div class="recent-item" onclick="window.location.href=\'/ui/review.html\'">' +
+      return '<div class="recent-item">' +
         '<div class="recent-left">' +
           '<div class="recent-icon">' + icon + '</div>' +
-          '<div>' +
+          '<div style="min-width:0;">' +
             '<div class="recent-filename">' + escapeHtml(d.filename || 'Untitled') + '</div>' +
             '<div class="recent-meta">' +
               escapeHtml(d.document_type || 'auto-detect') + ' · ' +
