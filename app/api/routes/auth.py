@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import User
-from app.services.email_service import generate_otp, send_otp_email
+from app.services.email_service import generate_otp, send_otp_email, send_otp_email_async
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -29,7 +29,7 @@ GOOGLE_USERINFO_URL = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
 # ==========================================================
-# Password hashing (PBKDF2 + legacy bcrypt support)
+# Password hashing
 # ==========================================================
 def _hash_password(password: str) -> str:
     salt = secrets.token_hex(16)
@@ -136,11 +136,15 @@ def _issue_tokens(user: User):
 
 
 def _send_new_otp(db: Session, user: User) -> bool:
+    """Generate OTP, save it, and send email in background (non-blocking)."""
     otp = generate_otp()
     user.otp_code = otp
     user.otp_expires = datetime.utcnow() + timedelta(minutes=10)
     db.commit()
-    return send_otp_email(user.email, otp)
+
+    # ✅ Fire-and-forget — background thread me bhejo
+    send_otp_email_async(user.email, otp)
+    return True
 
 
 # ==========================================================
@@ -148,7 +152,7 @@ def _send_new_otp(db: Session, user: User) -> bool:
 # ==========================================================
 @router.post("/signup")
 def signup(body: SignupRequest, db: Session = Depends(get_db)):
-    logger.info("AUTH v6 - signup request")
+    logger.info("AUTH v7 - signup request")
     email = body.email.strip().lower()
     try:
         existing = db.query(User).filter(func.lower(User.email) == email).first()
@@ -178,9 +182,7 @@ def signup(body: SignupRequest, db: Session = Depends(get_db)):
         logger.error(f"Signup DB error: {e}")
         raise HTTPException(500, f"Database error: {e}")
 
-    ok = _send_new_otp(db, user)
-    if not ok:
-        raise HTTPException(500, "OTP email failed. Check SMTP_PASS in .env")
+    _send_new_otp(db, user)
     return {"message": "OTP sent to email", "email": user.email}
 
 
@@ -208,9 +210,7 @@ def resend_otp(body: EmailOnlyRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(func.lower(User.email) == email).first()
     if not user:
         raise HTTPException(404, "User not found. Signup first.")
-    ok = _send_new_otp(db, user)
-    if not ok:
-        raise HTTPException(500, "OTP email failed. Check SMTP settings.")
+    _send_new_otp(db, user)
     return {"message": "New OTP sent"}
 
 
@@ -221,30 +221,23 @@ def resend_otp(body: EmailOnlyRequest, db: Session = Depends(get_db)):
 def login(body: LoginRequest, db: Session = Depends(get_db)):
     try:
         identifier = body.username.strip().lower()
-        logger.info(f"LOGIN ATTEMPT: identifier='{identifier}'")
-
         user = db.query(User).filter(
             (func.lower(User.email) == identifier) | (func.lower(User.username) == identifier)
         ).first()
 
         if not user:
-            logger.info("LOGIN FAIL: No user found")
             raise HTTPException(401, "No account found. Please Sign Up first.")
 
         if not user.hashed_password:
-            raise HTTPException(401, "Ye account Google se bana hai — 'Sign in with Google' use karo.")
+            raise HTTPException(401, "This account uses Google sign-in. Please use 'Sign in with Google'.")
 
-        stored = user.hashed_password
-        verified = _verify_password(body.password, stored)
-
-        if not verified:
+        if not _verify_password(body.password, user.hashed_password):
             raise HTTPException(401, "Wrong password. Try again.")
 
         if not user.is_verified:
             _send_new_otp(db, user)
             raise HTTPException(403, "Email verification required. OTP sent to your email.")
 
-        logger.info("LOGIN SUCCESS!")
         return _issue_tokens(user)
     except HTTPException:
         raise
@@ -280,7 +273,7 @@ def me(user: User = Depends(get_current_user)):
 
 
 # ==========================================================
-# Google OAuth — FIXED
+# Google OAuth
 # ==========================================================
 @router.get("/google")
 def google_login():
@@ -297,21 +290,15 @@ def google_login():
 
 @router.get("/google/callback")
 async def google_callback(code: str = None, error: str = None, db: Session = Depends(get_db)):
-    """Google OAuth callback with full error logging."""
     redirect_uri = settings.FRONTEND_URL + "/api/v1/auth/google/callback"
 
-    # Step 0: Google ne error bheja?
     if error:
         logger.error(f"Google OAuth error: {error}")
         return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error={error}")
 
     if not code:
-        logger.error("Google callback: no code received")
         return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=no_code")
 
-    logger.info(f"Google callback: code received (len={len(code)})")
-
-    # Step 1: Exchange code for tokens
     try:
         async with httpx.AsyncClient(timeout=20.0) as client:
             token_resp = await client.post(
@@ -325,61 +312,33 @@ async def google_callback(code: str = None, error: str = None, db: Session = Dep
                 },
                 headers={"Content-Type": "application/x-www-form-urlencoded"},
             )
-
-            logger.info(f"Token exchange status: {token_resp.status_code}")
-            logger.info(f"Token response body: {token_resp.text[:500]}")
-
             if token_resp.status_code != 200:
-                logger.error(f"Token exchange FAILED: {token_resp.text}")
-                return RedirectResponse(
-                    f"{settings.FRONTEND_URL}/ui/login.html?google_error=token_failed"
-                )
+                logger.error(f"Token exchange failed: {token_resp.text}")
+                return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=token_failed")
 
             tokens = token_resp.json()
             access_token = tokens.get("access_token")
-
             if not access_token:
-                logger.error(f"No access_token in tokens: {tokens}")
-                return RedirectResponse(
-                    f"{settings.FRONTEND_URL}/ui/login.html?google_error=no_token"
-                )
+                return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=no_token")
 
-            # Step 2: Get user info
             userinfo_resp = await client.get(
                 GOOGLE_USERINFO_URL,
                 headers={"Authorization": f"Bearer {access_token}"},
             )
-
-            logger.info(f"Userinfo status: {userinfo_resp.status_code}")
-            logger.info(f"Userinfo body: {userinfo_resp.text[:500]}")
-
             if userinfo_resp.status_code != 200:
-                logger.error(f"Userinfo FAILED: {userinfo_resp.text}")
-                return RedirectResponse(
-                    f"{settings.FRONTEND_URL}/ui/login.html?google_error=userinfo_failed"
-                )
+                return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=userinfo_failed")
 
             userinfo = userinfo_resp.json()
-
-    except httpx.TimeoutException:
-        logger.exception("Google OAuth timeout")
-        return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=timeout")
     except Exception as e:
-        logger.exception(f"Token/userinfo step crashed: {type(e).__name__}: {e}")
+        logger.exception(f"Google auth crashed: {e}")
         return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=exception")
 
-    # Step 3: Extract email
     email = (userinfo.get("email") or "").strip().lower()
     if not email:
-        logger.error(f"No email in userinfo: {userinfo}")
         return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=no_email")
 
-    logger.info(f"Google user email: {email}")
-
-    # Step 4: Find or create user
     try:
         user = db.query(User).filter(func.lower(User.email) == email).first()
-
         if not user:
             user = User(
                 username=email.split("@")[0],
@@ -392,31 +351,22 @@ async def google_callback(code: str = None, error: str = None, db: Session = Dep
             db.add(user)
             db.commit()
             db.refresh(user)
-            logger.info(f"New Google user created: {email}")
         elif not user.is_verified:
             user.is_verified = True
-            user.auth_provider = user.auth_provider or "google"
             db.commit()
-            logger.info(f"Existing user marked verified: {email}")
-
     except Exception as e:
         db.rollback()
-        logger.exception(f"DB error during Google login: {type(e).__name__}: {e}")
+        logger.exception(f"Google DB error: {e}")
         return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=db_error")
 
-    # Step 5: Issue tokens and redirect
-    try:
-        access = create_access_token(user)
-        refresh_tk = create_refresh_token(user)
-        username = user.username or user.full_name or email.split("@")[0]
+    access = create_access_token(user)
+    refresh_tk = create_refresh_token(user)
+    username = user.username or user.full_name or email.split("@")[0]
 
-        return RedirectResponse(
-            f"{settings.FRONTEND_URL}/ui/login.html"
-            f"?google_token={access}"
-            f"&refresh={refresh_tk}"
-            f"&user={username}"
-            f"&google_success=1"
-        )
-    except Exception as e:
-        logger.exception(f"Token creation failed: {type(e).__name__}: {e}")
-        return RedirectResponse(f"{settings.FRONTEND_URL}/ui/login.html?google_error=token_issue")
+    return RedirectResponse(
+        f"{settings.FRONTEND_URL}/ui/login.html"
+        f"?google_token={access}"
+        f"&refresh={refresh_tk}"
+        f"&user={username}"
+        f"&google_success=1"
+    )

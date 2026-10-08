@@ -90,7 +90,6 @@
   .preview-body .placeholder { text-align:center; color:#475569; font-size:13px; }
   .preview-body .placeholder .big { font-size:46px; opacity:.4; margin-bottom:12px; }
 
-  /* Receipt paper */
   .receipt-paper { background:#f8f8f3; color:#1a1a1a; font-family:'Courier New', Consolas, monospace;
     font-size:10px; line-height:1.5; padding:26px 22px 22px;
     width:340px; margin:20px auto; border-radius:2px;
@@ -147,7 +146,7 @@
   .conf-med { color:#fbbf24; background:rgba(245,158,11,.12); border:1px solid rgba(245,158,11,.3); }
   .conf-low { color:#f87171; background:rgba(239,68,68,.12); border:1px solid rgba(239,68,68,.3); }
 
-  .meta-bar { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; }
+  .meta-bar { display:flex; justify-content:space-between; align-items:center; padding:14px 20px; flex-wrap:wrap; gap:8px; }
   .badge-ok { display:inline-flex; align-items:center; gap:6px;
     background:rgba(16,185,129,.12); color:#34d399;
     border:1px solid rgba(16,185,129,.3);
@@ -158,6 +157,10 @@
     border:1px solid rgba(34,211,238,.3); padding:5px 12px; border-radius:999px;
     cursor:pointer; font-family:inherit; transition:.2s; }
   .btn-csv:hover { background:rgba(34,211,238,.2); }
+  .btn-download { font-size:12px; color:#a78bfa; background:rgba(139,92,246,.1);
+    border:1px solid rgba(139,92,246,.3); padding:5px 12px; border-radius:999px;
+    cursor:pointer; font-family:inherit; transition:.2s; }
+  .btn-download:hover { background:rgba(139,92,246,.2); }
 
   .status-bar { padding:12px 20px; font-size:13px; color:#22d3ee; }
   .status-bar.error { color:#f87171; }
@@ -315,6 +318,7 @@
   let currentRaw = null;
   let currentTab = 'visual';
   let pollStartTime = 0;
+  let currentDocId = null;
 
   // Pills
   document.querySelectorAll('.pill').forEach(p => {
@@ -408,7 +412,7 @@
   }
 
   async function upload(file) {
-    stopPolling(); clearStatus(); currentRaw = null;
+    stopPolling(); clearStatus(); currentRaw = null; currentDocId = null;
     previewFile(file);
     setStatus('⏳ Uploading ' + escapeHtml(file.name) + ' …<div class="progress"><div style="width:10%"></div></div>');
     document.getElementById('resultsVisual').innerHTML =
@@ -433,6 +437,7 @@
       if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
 
       const docId = data.document_id || data.id;
+      currentDocId = docId;
       const norm = normalizeDoc(data);
 
       if (Object.keys(norm.fields).length || norm.items.length) {
@@ -522,9 +527,10 @@
     } else {
       html = '<div class="meta-bar">' +
         '<span class="badge-ok">✓ Extracted</span>' +
-        '<div style="display:flex;gap:8px;align-items:center;">' +
+        '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">' +
           (norm.doc_type ? '<span class="tag">📄 ' + escapeHtml(norm.doc_type) + '</span>' : '') +
           '<button class="btn-csv" onclick="exportCSV()">⬇ CSV</button>' +
+          (currentDocId ? '<button class="btn-download" onclick="downloadOriginal()">⬇ Original</button>' : '') +
         '</div>' +
       '</div>';
       html += '<div class="field-grid" style="padding:0 20px 20px;">';
@@ -552,15 +558,13 @@
   }
 
   // ============================================================
-  // ⬇ CSV EXPORT — with Line Items section
+  // CSV EXPORT
   // ============================================================
   function exportCSV() {
     if (!currentRaw) return;
     const norm = normalizeDoc(currentRaw);
-
     let csv = '';
 
-    // Section 1: FIELDS
     csv += '=== EXTRACTED FIELDS ===\n';
     csv += 'field,value,confidence\n';
     for (const k in norm.fields) {
@@ -570,7 +574,6 @@
              (f.confidence ?? '') + '\n';
     }
 
-    // Section 2: LINE ITEMS
     if (norm.items && norm.items.length > 0) {
       csv += '\n=== LINE ITEMS ===\n';
       csv += '#,description,quantity,unit_price,amount\n';
@@ -591,16 +594,24 @@
   }
 
   // ============================================================
+  // DOWNLOAD ORIGINAL
+  // ============================================================
+  function downloadOriginal() {
+    if (!currentDocId) {
+      alert('No document to download');
+      return;
+    }
+    const url = '/api/v1/documents/' + currentDocId + '/download?token=' + encodeURIComponent(token);
+    window.open(url, '_blank');
+  }
+
+  // ============================================================
   // DEMO: Walgreens Receipt
   // ============================================================
   const DEMO = {
     document_id: "demo-sample-001",
     status: "extracted",
     document_type: "receipt",
-    vendor: { name: "Walgreens", phone: "650-342-2723",
-      type: "drugstores, convenience stores, cosmetics & beauty supply" },
-    receipt_date: "March 28, 2023, 1:10 pm",
-    payment: { card_number: "1850", name: "Visa ***1850", type: "visa" },
     fields: {
       vendor_name: { value: "Walgreens", confidence: 0.98 },
       vendor_phone: { value: "650-342-2723", confidence: 0.94 },
@@ -612,16 +623,6 @@
       sales_tax: { value: "1.83", confidence: 0.95 },
       total: { value: "29.43", confidence: 0.97 },
     },
-    line_items: [
-      { sku: "61126943157", item: "RED BULL ENRGY DRK CNS 8.4OZ 6PK", type: "food", quantity: 1, price: 9.99, total: 8.79 },
-      { sku: "00000007211", item: "CA REDMP VAL", type: "fee", quantity: 1, price: 0.00, total: 0.30 },
-      { sku: "04100000749", item: "NAB OREO CKTS C/P 5.25OZ WMS", type: "food", quantity: 1, price: 2.69, total: 2.69 },
-      { sku: "02840003205", item: "DORITOS NACHO CHEESE", type: "food", quantity: 1, price: 2.00, total: 2.00 },
-      { sku: "02100001315", item: "F/LAYS REGULAR 2.63OZ", type: "food", quantity: 1, price: 2.00, total: 2.00 },
-      { sku: "03760010022", item: "SCOTCH BRITE 6/PAD KITCHEN SPONGE", type: "household", quantity: 1, price: 4.79, total: 4.79 },
-      { sku: "01650058637", item: "PALMOLIVE DISH POWER", type: "household", quantity: 1, price: 1.49, total: 1.49 },
-      { sku: "02100000581", item: "SHIPPING BAG FEE", type: "fee", quantity: 1, price: 0.25, total: 0.25 },
-    ],
   };
 
   function demoReceiptHTML() {
@@ -652,6 +653,7 @@
   function loadDemo() {
     stopPolling(); clearStatus();
     currentRaw = DEMO;
+    currentDocId = null;
     document.getElementById('filename').textContent = 'sample_receipt.png';
     document.getElementById('pageInfo').textContent = 'Page 1 of 1';
     document.getElementById('preview').innerHTML = demoReceiptHTML();
@@ -683,9 +685,7 @@
     currentRaw = d;
   }
 
-  // ============================================================
-  // AUTO-LOAD DEMO ON PAGE OPEN
-  // ============================================================
+  // Auto-load demo on page open
   loadDemo();
 </script>
 </body>

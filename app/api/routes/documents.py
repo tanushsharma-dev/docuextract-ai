@@ -3,14 +3,16 @@ import shutil
 import logging
 from uuid import UUID, uuid4
 
+import jwt as pyjwt
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException
+from fastapi.responses import FileResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.core.database import get_db
 from app.models import Document, ExtractedField, LineItem, User
-from app.api.routes.auth import get_current_user
+from app.api.routes.auth import get_current_user, ALGORITHM
 from app.services.queue import enqueue_extraction_job
 
 logger = logging.getLogger(__name__)
@@ -28,7 +30,7 @@ ALLOWED_TYPES = [
 
 
 # ==========================================================
-# ⚡ STATS (fast aggregate — ONE query per metric)
+# STATS
 # ==========================================================
 @router.get("/stats")
 def get_stats(
@@ -38,28 +40,23 @@ def get_stats(
     uid = current_user.id
 
     total = db.query(func.count(Document.id)).filter(Document.user_id == uid).scalar() or 0
-
     extracted = db.query(func.count(Document.id)).filter(
         Document.user_id == uid,
         Document.status.in_(["extracted", "needs_review"]),
     ).scalar() or 0
-
     failed = db.query(func.count(Document.id)).filter(
         Document.user_id == uid,
         Document.status == "failed",
     ).scalar() or 0
-
     needs_review = db.query(func.count(Document.id)).filter(
         Document.user_id == uid,
         Document.status == "needs_review",
     ).scalar() or 0
-
     processing = db.query(func.count(Document.id)).filter(
         Document.user_id == uid,
         Document.status.in_(["uploaded", "processing"]),
     ).scalar() or 0
 
-    # Average confidence across user's extracted fields (single JOIN query)
     avg_conf = db.query(func.avg(ExtractedField.confidence)).join(
         Document, Document.id == ExtractedField.document_id
     ).filter(Document.user_id == uid).scalar()
@@ -117,7 +114,7 @@ def upload_document(
 
 
 # ==========================================================
-# LIST (user's own documents only)
+# LIST
 # ==========================================================
 @router.get("/")
 def list_documents(
@@ -143,6 +140,46 @@ def list_documents(
             for d in docs
         ]
     }
+
+
+# ==========================================================
+# DOWNLOAD ORIGINAL FILE
+# NOTE: Must come before /{document_id} route
+# ==========================================================
+@router.get("/{document_id}/download")
+def download_document(
+    document_id: UUID,
+    token: str = None,
+    db: Session = Depends(get_db),
+):
+    """Download original file. Auth via query param token."""
+    if not token:
+        raise HTTPException(401, "Token required")
+
+    try:
+        payload = pyjwt.decode(token, settings.JWT_SECRET, algorithms=[ALGORITHM])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(401, "Invalid token")
+    except Exception:
+        raise HTTPException(401, "Invalid or expired token")
+
+    doc = (
+        db.query(Document)
+        .filter(Document.id == document_id, Document.user_id == user_id)
+        .first()
+    )
+    if not doc:
+        raise HTTPException(404, "Document not found")
+
+    if not os.path.exists(doc.storage_path):
+        raise HTTPException(404, "File not found on disk")
+
+    return FileResponse(
+        path=doc.storage_path,
+        filename=doc.filename,
+        media_type=doc.mime_type or "application/octet-stream",
+    )
 
 
 # ==========================================================
